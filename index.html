@@ -3,41 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - Ultimate Edition</title>
+    <title>VOID - Legacy Essence</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
-        body { margin: 0; background: #050510; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; touch-action: none; color: white; }
+        body { margin: 0; background: #050510; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
-
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            pointer-events: none; z-index: 10;
-        }
-
-        .menu-box {
-            text-align: center; background: rgba(0,0,0,0.85); padding: 25px;
-            border-radius: 20px; border: 2px solid #333; backdrop-filter: blur(10px);
-            display: none; pointer-events: auto; width: 80%; max-width: 300px;
-            box-shadow: 0 0 30px rgba(0,255,255,0.1);
-        }
-
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
+        .menu-box { text-align: center; background: rgba(0,0,0,0.9); padding: 25px; border-radius: 20px; border: 2px solid #333; backdrop-filter: blur(10px); display: none; pointer-events: auto; width: 80%; max-width: 300px; }
         h1 { font-size: 45px; letter-spacing: 10px; margin: 10px 0; text-shadow: 0 0 15px var(--neon); color: var(--neon); }
-        
-        .btn {
-            width: 100%; margin: 10px 0; padding: 15px;
-            background: #111; color: white; border: 1px solid #444;
-            border-radius: 12px; font-weight: bold; cursor: pointer;
-            text-transform: uppercase; font-size: 14px; transition: 0.2s;
-        }
-        .btn:active { transform: scale(0.95); background: var(--neon); color: #000; }
-        .btn-main { border: 2px solid var(--pink); color: white; }
-
-        .lang-selector { position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 20; font-size: 12px; }
+        .btn { width: 100%; margin: 10px 0; padding: 15px; background: #111; color: white; border: 1px solid #444; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn-main { border: 2px solid var(--pink); }
+        .lang-selector { position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 20; }
         .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid #444; color: white; padding: 5px 10px; border-radius: 5px; margin-left: 5px; cursor: pointer; }
         .lang-active { border-color: var(--neon); color: var(--neon); }
-        
-        .stats { margin-bottom: 15px; font-size: 14px; color: #aaa; }
     </style>
 </head>
 <body>
@@ -52,24 +30,19 @@
     <div id="ui-layer">
         <div id="menu-main" class="menu-box" style="display: block;">
             <h1>VOID</h1>
-            <div class="stats">
-                <span id="t-best">RÉCORD</span>: <span id="val-best">0</span>
-            </div>
-            <button class="btn btn-main" id="b-play" onclick="showMenu('menu-play')">JUGAR</button>
-            <button class="btn" id="b-store" onclick="alert('Store logic next!')">TIENDA</button>
+            <p>BEST: <span id="val-best">0</span></p>
+            <button class="btn btn-main" onclick="showMenu('menu-play')">JUGAR</button>
         </div>
-
         <div id="menu-play" class="menu-box">
-            <h2 id="t-modes" style="color:var(--neon)">MODOS</h2>
-            <button class="btn btn-main" id="b-inf" onclick="startGame()">INFINITO</button>
-            <button class="btn" id="b-back" onclick="showMenu('menu-main')">VOLVER</button>
+            <h2 style="color:var(--neon)">MODOS</h2>
+            <button class="btn btn-main" onclick="startGame()">INFINITO</button>
+            <button class="btn" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
-
         <div id="menu-death" class="menu-box">
-            <h2 id="t-over" style="color:var(--pink)">GAME OVER</h2>
-            <p><span id="t-score">PUNTOS</span>: <span id="val-score">0</span></p>
-            <button class="btn btn-main" id="b-retry" onclick="startGame()">REINTENTAR</button>
-            <button class="btn" id="b-menu" onclick="showMenu('menu-main')">MENÚ</button>
+            <h2 style="color:var(--pink)">GAME OVER</h2>
+            <p>SCORE: <span id="val-score">0</span></p>
+            <button class="btn btn-main" onclick="startGame()">REINTENTAR</button>
+            <button class="btn" onclick="showMenu('menu-main')">MENÚ</button>
         </div>
     </div>
 
@@ -77,28 +50,7 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     
-    const langData = {
-        es: { best: "RÉCORD", play: "JUGAR", store: "TIENDA", modes: "MODOS", inf: "INFINITO", back: "VOLVER", over: "FIN DE PARTIDA", score: "PUNTOS", retry: "REINTENTAR", menu: "MENÚ" },
-        en: { best: "BEST", play: "PLAY", store: "STORE", modes: "MODES", inf: "INFINITE", back: "BACK", over: "GAME OVER", score: "SCORE", retry: "RETRY", menu: "MENU" }
-    };
-
-    function setLanguage(l) {
-        const t = langData[l];
-        document.getElementById('t-best').innerText = t.best;
-        document.getElementById('b-play').innerText = t.play;
-        document.getElementById('b-store').innerText = t.store;
-        document.getElementById('t-modes').innerText = t.modes;
-        document.getElementById('b-inf').innerText = t.inf;
-        document.getElementById('b-back').innerText = t.back;
-        document.getElementById('t-over').innerText = t.over;
-        document.getElementById('t-score').innerText = t.score;
-        document.getElementById('b-retry').innerText = t.retry;
-        document.getElementById('b-menu').innerText = t.menu;
-        document.getElementById('l-es').className = l === 'es' ? 'lang-btn lang-active' : 'lang-btn';
-        document.getElementById('l-en').className = l === 'en' ? 'lang-btn lang-active' : 'lang-btn';
-    }
-
-    let gameActive = false, score = 0, frame = 0;
+    let gameActive = false, score = 0, frame = 0, angle = 0;
     let player, obstacles = [], stars = [], trail = [];
     let highScore = localStorage.getItem('void_best') || 0;
 
@@ -113,30 +65,45 @@
 
     function showMenu(id) {
         document.querySelectorAll('.menu-box').forEach(m => m.style.display = 'none');
-        if(id !== 'none') {
-            document.getElementById(id).style.display = 'block';
-            gameActive = false;
-        } else {
-            gameActive = true;
-        }
+        if(id !== 'none') { document.getElementById(id).style.display = 'block'; gameActive = false; }
+        else { gameActive = true; }
     }
 
     function startGame() {
-        player = { x: canvas.width * 0.15, y: canvas.height/2, size: 28, vy: 0, gravity: 0.6, jump: -9 };
-        obstacles = [];
-        trail = [];
-        score = 0;
-        frame = 0;
+        player = { x: canvas.width * 0.15, y: canvas.height/2, size: 25, vy: 0, gravity: 0.5, jump: -8 };
+        obstacles = []; trail = []; score = 0; frame = 0; angle = 0;
         showMenu('none');
+    }
+
+    function createObstacle() {
+        const type = Math.floor(Math.random() * 4);
+        const w = 60, gap = 180;
+        
+        switch(type) {
+            case 0: // ARRIBA
+                obstacles.push({ x: canvas.width, y: 0, w: w, h: Math.random()*200 + 100, p: false });
+                break;
+            case 1: // ABAJO
+                let h = Math.random()*200 + 100;
+                obstacles.push({ x: canvas.width, y: canvas.height - h, w: w, h: h, p: false });
+                break;
+            case 2: // CENTRO (BLOQUE FLOTANTE)
+                obstacles.push({ x: canvas.width, y: canvas.height/2 - 50, w: w, h: 100, p: false });
+                break;
+            case 3: // PUERTAS (DOBLE)
+                let wallH = Math.random() * (canvas.height - gap - 100) + 50;
+                obstacles.push({ x: canvas.width, y: 0, w: w, h: wallH, p: false });
+                obstacles.push({ x: canvas.width, y: wallH + gap, w: w, h: canvas.height, p: false });
+                break;
+        }
     }
 
     function loop() {
         ctx.fillStyle = '#050510';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Estrellas
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
         stars.forEach(s => {
+            ctx.fillStyle = "white";
             ctx.fillRect(s.x, s.y, s.s, s.s);
             if(gameActive) s.x -= s.v;
             if(s.x < 0) s.x = canvas.width;
@@ -145,63 +112,52 @@
         if (gameActive || document.getElementById('menu-death').style.display === 'block') {
             if(gameActive) {
                 frame++;
-                trail.push({x: player.x, y: player.y});
-                if(trail.length > 12) trail.shift();
+                angle += 0.1; // Rotación constante
+                trail.push({x: player.x, y: player.y, a: angle});
+                if(trail.length > 15) trail.shift();
+                if(frame % 100 === 0) createObstacle();
             }
 
-            // DIBUJO JUGADOR PRO
-            ctx.save();
-            ctx.translate(player.x + player.size/2, player.y + player.size/2);
-            ctx.rotate(player.vy * 0.04);
-
-            // Estela
+            // DIBUJAR ESTELA
             trail.forEach((t, i) => {
-                ctx.fillStyle = `rgba(0, 255, 255, ${i/25})`;
-                ctx.fillRect(-player.size/2 + (i-12), -player.size/2, player.size, player.size);
+                ctx.save();
+                ctx.translate(t.x + 12.5, t.y + 12.5);
+                ctx.rotate(t.a);
+                ctx.fillStyle = `rgba(0, 255, 255, ${i/30})`;
+                ctx.fillRect(-12.5, -12.5, 25, 25);
+                ctx.restore();
             });
 
-            // Cuerpo Neon
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "#00ffff";
-            ctx.strokeStyle = "#00ffff";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
+            // JUGADOR PRO
+            ctx.save();
+            ctx.translate(player.x + 12.5, player.y + 12.5);
+            ctx.rotate(angle);
+            ctx.shadowBlur = 15; ctx.shadowColor = "#00ffff";
+            ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 2;
+            ctx.strokeRect(-12.5, -12.5, 25, 25);
             ctx.fillStyle = "white";
-            ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
+            ctx.fillRect(-6, -6, 12, 12);
             ctx.restore();
-            ctx.shadowBlur = 0;
 
-            // Obstáculos
-            if(gameActive && frame % 90 === 0) {
-                let gap = 190;
-                let h = Math.random() * (canvas.height - gap - 120) + 60;
-                obstacles.push({ x: canvas.width, y: 0, w: 50, h: h, p: false });
-                obstacles.push({ x: canvas.width, y: h + gap, w: 50, h: canvas.height, p: false });
-            }
-
+            // OBSTÁCULOS
             obstacles.forEach((o, i) => {
-                if(gameActive) o.x -= (5 + score * 0.05);
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = "#ff00ff";
-                ctx.fillStyle = "rgba(255, 0, 255, 0.15)";
+                if(gameActive) o.x -= (4 + score * 0.1);
+                ctx.shadowBlur = 10; ctx.shadowColor = "#ff00ff";
+                ctx.fillStyle = "rgba(255, 0, 255, 0.2)";
                 ctx.strokeStyle = "#ff00ff";
-                ctx.lineWidth = 3;
-                ctx.fillRect(o.x, o.y, o.w, o.h);
                 ctx.strokeRect(o.x, o.y, o.w, o.h);
+                ctx.fillRect(o.x, o.y, o.w, o.h);
                 
-                if (gameActive && player.x + 5 < o.x + o.w && player.x + player.size - 5 > o.x && player.y + 5 < o.y + o.h && player.y + player.size - 5 > o.y) {
-                    endGame();
-                }
-                if (gameActive && !o.p && o.x < player.x) { o.p = true; if (i % 2 === 0) score++; }
+                if (gameActive && player.x < o.x + o.w && player.x + 25 > o.x && player.y < o.y + o.h && player.y + 25 > o.y) endGame();
+                if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; }
             });
-            if (obstacles.length > 10) obstacles.splice(0, 2);
+            if(obstacles.length > 15) obstacles.splice(0,1);
+            
             ctx.shadowBlur = 0;
-
-            // Score
-            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-            ctx.font = "bold 120px sans-serif";
+            ctx.fillStyle = "rgba(255,255,255,0.1)";
+            ctx.font = "bold 80px sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
+            ctx.fillText(score, canvas.width/2, canvas.height/2);
         }
 
         if(gameActive) {
@@ -214,18 +170,13 @@
 
     function endGame() {
         gameActive = false;
-        if(score > highScore) {
-            highScore = score;
-            localStorage.setItem('void_best', highScore);
-            document.getElementById('val-best').innerText = highScore;
-        }
+        if(score > highScore) { highScore = score; localStorage.setItem('void_best', highScore); }
+        document.getElementById('val-best').innerText = highScore;
         document.getElementById('val-score').innerText = score;
         showMenu('menu-death');
     }
 
     window.addEventListener('pointerdown', () => { if(gameActive) player.vy = player.jump; });
-    document.getElementById('val-best').innerText = highScore;
-    setLanguage('es');
     loop();
 </script>
 </body>

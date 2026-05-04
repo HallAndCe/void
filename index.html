@@ -130,6 +130,7 @@
     }
 
     function startGame() {
+        trail = [];
         player = { x: canvas.width * 0.15, y: canvas.height/2, size: 25, vy: 0, gravity: 0.6, jump: -9 };
         obstacles = [];
         score = 0;
@@ -225,7 +226,99 @@
 
     document.getElementById('val-best').innerText = highScore;
     setLanguage('es');
-    loop();
+    // --- NUEVO MOTOR VISUAL PRO ---
+    let trail = []; // Esta línea guárdala justo arriba de la función loop
+
+    function loop() {
+        // 1. Limpiar pantalla con fondo espacial
+        ctx.fillStyle = '#050510';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 2. Estrellas de fondo con movimiento
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        stars.forEach(s => {
+            ctx.fillRect(s.x, s.y, s.s, s.s);
+            if(gameActive) s.x -= s.v;
+            if(s.x < 0) s.x = canvas.width;
+        });
+
+        if (gameActive || document.getElementById('menu-death').style.display === 'block') {
+            
+            // --- ESTELA DEL JUGADOR (TRAIL) ---
+            if(gameActive) {
+                frame++;
+                trail.push({x: player.x, y: player.y, opacity: 1});
+                if(trail.length > 12) trail.shift();
+            }
+
+            // --- DIBUJO DEL JUGADOR REMODELADO ---
+            ctx.save();
+            // Lo movemos a su posición y lo hacemos girar según su caída
+            ctx.translate(player.x + player.size/2, player.y + player.size/2);
+            let angle = player.vy * 0.04; 
+            ctx.rotate(angle);
+
+            // Dibujar rastro de energía
+            trail.forEach((t, i) => {
+                ctx.fillStyle = `rgba(0, 255, 255, ${i/25})`;
+                ctx.fillRect(-player.size/2 + (i-12), -player.size/2, player.size, player.size);
+            });
+
+            // Cuerpo del jugador: Marco de Neón
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "#00ffff";
+            ctx.strokeStyle = "#00ffff";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
+            
+            // Núcleo de energía central
+            ctx.fillStyle = "white";
+            ctx.shadowBlur = 10;
+            ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
+            ctx.restore();
+            ctx.shadowBlur = 0; 
+
+            // --- DIBUJO DE OBSTÁCULOS PRO ---
+            obstacles.forEach((o, i) => {
+                o.x -= (5 + score * 0.05);
+                
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = "#ff00ff";
+                ctx.fillStyle = "rgba(255, 0, 255, 0.15)";
+                ctx.strokeStyle = "#ff00ff";
+                ctx.lineWidth = 3;
+                ctx.fillRect(o.x, o.y, o.w, o.h);
+                ctx.strokeRect(o.x, o.y, o.w, o.h);
+                
+                // Colisión (con un margen pequeño para que sea más justo)
+                if (player.x + 5 < o.x + o.w && player.x + player.size - 5 > o.x && 
+                    player.y + 5 < o.y + o.h && player.y + player.size - 5 > o.y) {
+                    endGame();
+                }
+
+                if (!o.p && o.x < player.x) {
+                    o.p = true;
+                    if (i % 2 === 0) score++;
+                }
+            });
+            ctx.shadowBlur = 0;
+
+            // Puntuación fantasma al fondo
+            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.font = "bold 120px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
+        }
+
+        // FÍSICAS
+        if(gameActive) {
+            player.vy += player.gravity;
+            player.y += player.vy;
+            if (player.y > canvas.height || player.y < 0) endGame();
+        }
+
+        requestAnimationFrame(loop);
+    }
 </script>
 </body>
 </html>

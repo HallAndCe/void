@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID DEBUG</title>
+    <title>VOID FINAL</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <style>
-        body { margin: 0; background: #111; touch-action: none; overflow: hidden; }
-        canvas { display: block; }
-    </style>
+    <style>body { margin: 0; background: #000; overflow: hidden; }</style>
 </head>
 <body>
 <script>
@@ -16,76 +13,55 @@ const config = {
     type: Phaser.AUTO,
     width: 800,
     height: 600,
-    backgroundColor: '#000000',
+    physics: { default: 'arcade' },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
-    scene: { preload: preload, create: create, update: update }
+    scene: { create: create, update: update }
 };
 
-let player, obstacles, score = 0, scoreText, isGameOver = false, gameStarted = false;
+let player, obstacles, score = 0, scoreText, gameStarted = false, nextObstacle = 0;
 const game = new Phaser.Game(config);
-
-function preload() {}
 
 function create() {
     player = this.add.rectangle(150, 300, 40, 40, 0x00ffff);
     this.physics.add.existing(player);
     player.body.setCollideWorldBounds(true);
-    
     obstacles = this.physics.add.group();
-
-    // Texto de inicio
-    let startText = this.add.text(400, 300, 'CLICK TO TEST', { fontSize: '40px', fill: '#ff0000' }).setOrigin(0.5);
-
+    scoreText = this.add.text(400, 100, '0', { fontSize: '100px', fill: '#fff' }).setOrigin(0.5).setAlpha(0.2);
+    this.add.text(400, 300, 'TAP TO PLAY', { fontSize: '40px', fill: '#fff' }).setOrigin(0.5).setName('t');
+    
     this.input.on('pointerdown', () => {
         if (!gameStarted) {
             gameStarted = true;
-            startText.destroy();
+            this.children.getByName('t').destroy();
             player.body.setVelocityY(400);
-            
-            // LANZAR EL PRIMER OBSTÁCULO AL INSTANTE
-            spawnObstacle.call(this);
-            
-            // Lógica de repetición
-            this.time.addEvent({ 
-                delay: 1500, 
-                callback: spawnObstacle, 
-                callbackScope: this, 
-                loop: true 
-            });
-        } else if (!isGameOver) {
+        } else {
             player.body.setVelocityY(player.body.velocity.y * -1);
             player.setFillStyle(player.body.velocity.y > 0 ? 0x00ffff : 0xff00ff);
         }
     });
-
-    scoreText = this.add.text(400, 100, '0', { fontSize: '80px', fill: '#fff' }).setOrigin(0.5).setAlpha(0.5);
 }
 
-function spawnObstacle() {
-    if (isGameOver) return;
-    
-    // Crear un bloque ROJO gigante para que sea imposible no verlo
-    const yPos = Math.random() > 0.5 ? 0 : 400;
-    let obs = this.add.rectangle(900, yPos + 100, 80, 300, 0xff0000); // ROJO
-    this.physics.add.existing(obs);
-    obs.body.setVelocityX(-300); // Más lento para que de tiempo a verlo
-    obstacles.add(obs);
-    
-    console.log("Obstáculo creado en X: 900, Y: " + yPos); // Esto lo veremos en la consola del PC
-}
+function update(time) {
+    if (!gameStarted) return;
 
-function update() {
-    if (isGameOver) return;
+    // SISTEMA MANUAL: Si el tiempo actual supera al marcador, soltamos bloque
+    if (time > nextObstacle) {
+        const isTop = Math.random() > 0.5;
+        let obs = this.add.rectangle(850, isTop ? 100 : 500, 60, 250, 0xffffff);
+        this.physics.add.existing(obs);
+        obs.body.setVelocityX(-450);
+        obstacles.add(obs);
+        nextObstacle = time + 1500; // Siguiente en 1.5 segundos
+    }
 
+    // Colisiones
     this.physics.add.overlap(player, obstacles, () => {
-        isGameOver = true;
-        this.cameras.main.shake(500, 0.05);
-        setTimeout(() => { location.reload(); }, 1000);
+        location.reload();
     });
 
+    // Puntuación
     obstacles.children.iterate(child => {
-        if (child && child.x < -100) {
+        if (child && child.x < -50) {
             child.destroy();
             score++;
             scoreText.setText(score);

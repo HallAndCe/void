@@ -3,34 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID</title>
+    <title>VOID - NEON</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; transition: filter 0.5s ease; }
-        .blurred { filter: blur(8px) brightness(0.4); }
-        
+        .blurred { filter: blur(10px) brightness(0.3); }
         #ui-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             text-align: center; color: white; display: none; width: 85%; z-index: 10;
         }
-        #ui-overlay img { max-width: 140px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,255,255,0.5)); }
-        #ui-overlay h1 { font-size: 45px; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
-        #ui-overlay p { font-size: 22px; margin: 8px 0; font-weight: 300; }
-        .retry-text { font-size: 14px !important; color: #aaa; margin-top: 20px !important; text-transform: uppercase; }
+        #ui-overlay img { max-width: 140px; margin-bottom: 15px; border-radius: 20px; }
     </style>
 </head>
 <body>
     <canvas id="game"></canvas>
-    
     <div id="ui-overlay">
-        <img id="logo" src="logo.jpg" alt="Logo">
+        <img id="logo" src="logo.png" alt="Logo">
         <h1 id="final-score">SCORE: 0</h1>
         <p id="high-score">BEST: 0</p>
-        <p class="retry-text" id="instruction-retry">Tap to try again</p>
+        <p style="color: #aaa; margin-top: 20px;" id="instruction-retry">Tap to try again</p>
     </div>
 
 <script>
-    // SISTEMA DE IDIOMAS
     const lang = navigator.language.startsWith('es') ? 'es' : 'en';
     const texts = {
         es: { start: 'TOCA PARA EMPEZAR', score: 'PUNTOS', best: 'RÉCORD', retry: 'Toca para reintentar' },
@@ -49,6 +43,7 @@
     let gameStarted = false;
     let gameOver = false;
     let gameSpeed = 5.5;
+    let trail = []; // Array para la estela
 
     const player = {
         x: canvas.width * 0.2,
@@ -56,83 +51,61 @@
         size: 32,
         vy: 0,
         speed: 7.5,
-        color: '#00ffff'
+        color: '#00ffff',
+        angle: 0 // Para la rotación
     };
 
     let obstacles = [];
     let frame = 0;
 
     function spawnObstacle() {
-        const minH = canvas.height * 0.25;
-        const maxH = canvas.height * 0.50;
-        const h = Math.random() * (maxH - minH) + minH;
+        const h = Math.random() * (canvas.height * 0.3) + (canvas.height * 0.2);
         const isTop = Math.random() > 0.5;
-        
         obstacles.push({
             x: canvas.width + 100,
             y: isTop ? 0 : canvas.height - h,
             w: 65,
             h: h,
-            color: '#1a1a1a', // Color oscuro para los bloques
-            edge: isTop ? '#ff00ff' : '#00ffff' // Bordes neón
+            color: '#111',
+            edge: isTop ? '#ff00ff' : '#00ffff'
         });
     }
 
     function resetGame() {
-        score = 0;
-        gameSpeed = 5.5;
-        obstacles = [];
-        frame = 0;
-        gameOver = false;
-        gameStarted = false;
-        player.y = canvas.height / 2;
-        player.vy = 0;
+        score = 0; gameSpeed = 5.5; obstacles = []; trail = []; frame = 0;
+        gameOver = false; gameStarted = false;
+        player.y = canvas.height / 2; player.vy = 0; player.angle = 0;
         ui.style.display = 'none';
         canvas.classList.remove('blurred');
     }
 
     function update() {
         if (!gameStarted || gameOver) return;
-
         frame++;
         player.y += player.vy;
+        player.angle += 0.15; // Rotación constante
 
-        // Muerte por bordes
-        if (player.y < 0 || player.y + player.size > canvas.height) endGame();
+        // Guardar posición para la estela
+        trail.push({ x: player.x, y: player.y, alpha: 1.0, color: player.color, angle: player.angle });
+        if (trail.length > 15) trail.shift(); // Longitud de la estela
 
-        // Generación de obstáculos progresiva
+        if (player.y < 0 || player.y + player.size > canvas.height) gameOver = true, endGame();
+
         if (frame % Math.max(35, Math.floor(75 - score * 0.4)) === 0) spawnObstacle();
 
         obstacles.forEach((obs, index) => {
             obs.x -= (gameSpeed + score * 0.18);
-
-            // Colisión
-            if (player.x < obs.x + obs.w &&
-                player.x + player.size > obs.x &&
-                player.y < obs.y + obs.h &&
-                player.y + player.size > obs.y) {
-                endGame();
-            }
-
-            if (obs.x + obs.w < 0) {
-                obstacles.splice(index, 1);
-                score++;
-            }
+            if (player.x < obs.x + obs.w && player.x + player.size > obs.x &&
+                player.y < obs.y + obs.h && player.y + player.size > obs.y) endGame();
+            if (obs.x + obs.w < 0) { obstacles.splice(index, 1); score++; }
         });
     }
 
     function endGame() {
         gameOver = true;
-        if (score > highScore) {
-            highScore = score;
-            localStorage.setItem('voidHighScore', highScore);
-        }
-        
-        // Actualizar textos según idioma
+        if (score > highScore) { highScore = score; localStorage.setItem('voidHighScore', highScore); }
         document.getElementById('final-score').innerText = `${texts[lang].score}: ${score}`;
         document.getElementById('high-score').innerText = `${texts[lang].best}: ${highScore}`;
-        document.getElementById('instruction-retry').innerText = texts[lang].retry;
-        
         ui.style.display = 'block';
         canvas.classList.add('blurred');
     }
@@ -141,17 +114,41 @@
         ctx.fillStyle = '#050505';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Puntuación gigante de fondo
-        ctx.fillStyle = 'rgba(255,255,255,0.04)';
-        ctx.font = 'bold 180px sans-serif';
+        // Score de fondo
+        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+        ctx.font = 'bold 200px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(score, canvas.width/2, canvas.height/2 + 60);
+        ctx.fillText(score, canvas.width/2, canvas.height/2 + 70);
 
-        // Jugador
-        ctx.shadowBlur = 15;
+        // DIBUJAR ESTELA (TRAIL)
+        trail.forEach((t, i) => {
+            ctx.save();
+            ctx.translate(t.x + player.size/2, t.y + player.size/2);
+            ctx.rotate(t.angle);
+            ctx.globalAlpha = i / trail.length * 0.5; // Se desvanece
+            ctx.strokeStyle = t.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.restore();
+        });
+
+        // DIBUJAR JUGADOR (NÚCLEO NEÓN)
+        ctx.save();
+        ctx.translate(player.x + player.size/2, player.y + player.size/2);
+        ctx.rotate(player.angle);
+        
+        // Brillo exterior
+        ctx.shadowBlur = 20;
         ctx.shadowColor = player.color;
+        
+        // Relleno principal
         ctx.fillStyle = player.color;
-        ctx.fillRect(player.x, player.y, player.size, player.size);
+        ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+        
+        // Núcleo blanco interno para efecto "guay"
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
+        ctx.restore();
         ctx.shadowBlur = 0;
 
         // Obstáculos
@@ -164,25 +161,18 @@
         });
 
         if (!gameStarted && !gameOver) {
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 22px sans-serif';
-            ctx.fillText(texts[lang].start, canvas.width/2, canvas.height/2 + 180);
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif';
+            ctx.fillText(texts[lang].start, canvas.width/2, canvas.height/2 + 200);
         }
 
         update();
         requestAnimationFrame(draw);
     }
 
-    window.addEventListener('pointerdown', (e) => {
-        if (gameOver) {
-            resetGame();
-        } else if (!gameStarted) {
-            gameStarted = true;
-            player.vy = player.speed;
-        } else {
-            player.vy *= -1;
-            player.color = player.vy > 0 ? '#00ffff' : '#ff00ff';
-        }
+    window.addEventListener('pointerdown', () => {
+        if (gameOver) resetGame();
+        else if (!gameStarted) { gameStarted = true; player.vy = player.speed; }
+        else { player.vy *= -1; player.color = player.vy > 0 ? '#00ffff' : '#ff00ff'; }
     });
 
     draw();

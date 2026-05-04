@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - DUAL</title>
+    <title>VOID - MOBILE ADAPTED</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; transition: filter 0.5s ease; }
@@ -35,28 +35,36 @@
     const ctx = canvas.getContext('2d');
     const ui = document.getElementById('ui-overlay');
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // AJUSTE DINÁMICO DE PANTALLA
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
 
     let score = 0;
     let highScore = localStorage.getItem('voidHighScore') || 0;
     let gameStarted = false;
     let gameOver = false;
-    let gameSpeed = 5;
+    
+    // VELOCIDAD ADAPTATIVA: En móvil (ancho pequeño) la base es más lenta
+    const getBaseSpeed = () => canvas.width < 500 ? canvas.width * 0.008 : 5.5;
+    let gameSpeed = getBaseSpeed();
+    
     let trail = [];
     let stars = [];
-
-    for(let i = 0; i < 50; i++) {
-        stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 0.5 + 0.2 });
+    for(let i = 0; i < 40; i++) {
+        stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 0.4 + 0.1 });
     }
 
     const player = {
         x: canvas.width * 0.2,
         y: canvas.height / 2,
-        size: 30,
+        size: canvas.width < 500 ? 25 : 30, // Cubo un pelín más pequeño en móvil
         vy: 0,
-        gravity: 0.65, 
-        jump: -12,
+        gravity: 0.6, 
+        jump: -11,
         angle: 0
     };
 
@@ -65,9 +73,8 @@
 
     function spawnObstacle() {
         const type = Math.random();
-        const w = 65;
-        const gap = 190;
-        // Decisión de color: 50% rosa, 50% azul
+        const w = canvas.width < 500 ? 50 : 65;
+        const gap = canvas.width < 500 ? 170 : 195; // Hueco un pelín más generoso en móvil
         const obsColor = Math.random() > 0.5 ? '#ff00ff' : '#00ffff';
         
         if (type < 0.45) {
@@ -77,14 +84,14 @@
             obstacles.push({ x: canvas.width + 100, y: 0, w: w, h: gateY, edge: obsColor });
             obstacles.push({ x: canvas.width + 100, y: gateY + gap, w: w, h: canvas.height - (gateY + gap), edge: obsColor });
         } else {
-            const h = Math.random() * (canvas.height * 0.3) + 150;
+            const h = Math.random() * (canvas.height * 0.3) + 140;
             const isTop = Math.random() > 0.5;
             obstacles.push({ x: canvas.width + 100, y: isTop ? 0 : canvas.height - h, w: w, h: h, edge: obsColor });
         }
     }
 
     function resetGame() {
-        score = 0; gameSpeed = 5; obstacles = []; trail = []; frame = 0;
+        score = 0; gameSpeed = getBaseSpeed(); obstacles = []; trail = []; frame = 0;
         gameOver = false; gameStarted = false;
         player.y = canvas.height / 2; player.vy = 0;
         ui.style.display = 'none';
@@ -101,14 +108,19 @@
         stars.forEach(s => { s.x -= s.speed; if(s.x < 0) s.x = canvas.width; });
 
         trail.push({ x: player.x, y: player.y, angle: player.angle });
-        if (trail.length > 12) trail.shift();
+        if (trail.length > 10) trail.shift();
 
         if (player.y < 0 || player.y + player.size > canvas.height) endGame();
 
-        if (frame % Math.max(30, Math.floor(85 - score * 0.6)) === 0) spawnObstacle();
+        // FRECUENCIA ADAPTATIVA: Menos frecuencia en pantallas estrechas
+        const spawnRate = canvas.width < 500 ? 100 : 85;
+        if (frame % Math.max(35, Math.floor(spawnRate - score * 0.6)) === 0) spawnObstacle();
 
         obstacles.forEach((obs, index) => {
-            obs.x -= (gameSpeed + score * 0.22);
+            // VELOCIDAD QUE ESCALA CON LOS PUNTOS
+            const currentSpeed = gameSpeed + (score * (canvas.width < 500 ? 0.15 : 0.22));
+            obs.x -= currentSpeed;
+
             if (player.x < obs.x + obs.w && player.x + player.size > obs.x &&
                 player.y < obs.y + obs.h && player.y + player.size > obs.y) endGame();
             
@@ -140,54 +152,39 @@
         ctx.globalAlpha = 1.0;
 
         ctx.fillStyle = 'rgba(255,255,255,0.03)';
-        ctx.font = 'bold 200px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(score, canvas.width/2, canvas.height/2 + 70);
+        ctx.font = `bold ${canvas.width < 500 ? '120px' : '200px'} sans-serif`; 
+        ctx.textAlign = 'center';
+        ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
 
-        // JUGADOR DUAL (Azul + Rosa)
         const drawPlayerBody = (x, y, size, angle, isTrail) => {
             ctx.save();
             ctx.translate(x + size/2, y + size/2);
             ctx.rotate(angle);
-            
-            // Degradado Dual
             let pGrd = ctx.createLinearGradient(-size/2, -size/2, size/2, size/2);
-            pGrd.addColorStop(0, '#00ffff'); // Azul
-            pGrd.addColorStop(1, '#ff00ff'); // Rosa
-            
-            if (!isTrail) {
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#00ffff';
-            }
-            
+            pGrd.addColorStop(0, '#00ffff');
+            pGrd.addColorStop(1, '#ff00ff');
+            if (!isTrail) { ctx.shadowBlur = 15; ctx.shadowColor = '#00ffff'; }
             ctx.fillStyle = pGrd;
             ctx.fillRect(-size/2, -size/2, size, size);
-            
-            if (!isTrail) {
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(-size/4, -size/4, size/2, size/2);
-            }
+            if (!isTrail) { ctx.fillStyle = '#fff'; ctx.fillRect(-size/4, -size/4, size/2, size/2); }
             ctx.restore();
         };
 
-        // Dibujar Estela
         trail.forEach((t, i) => {
             ctx.globalAlpha = i / trail.length * 0.3;
             drawPlayerBody(t.x, t.y, player.size, t.angle, true);
         });
         ctx.globalAlpha = 1.0;
 
-        // Dibujar Jugador Actual
         drawPlayerBody(player.x, player.y, player.size, player.angle, false);
         ctx.shadowBlur = 0;
 
-        // Obstáculos Puros
         obstacles.forEach(obs => {
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
             ctx.strokeStyle = obs.edge;
             ctx.lineWidth = 3;
             ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-            
             ctx.globalAlpha = 0.15;
             ctx.fillStyle = obs.edge;
             ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
@@ -196,7 +193,7 @@
 
         if (!gameStarted && !gameOver) {
             ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif';
-            ctx.fillText(texts[lang].start, canvas.width/2, canvas.height/2 + 200);
+            ctx.fillText(texts[lang].start, canvas.width/2, canvas.height/2 + 150);
         }
 
         update();

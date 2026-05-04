@@ -1,19 +1,12 @@
-¡Qué frustración! Siento mucho que sigamos con la pantalla en negro. Es probable que haya un pequeño error "silencioso" que bloquea el dibujo del juego en tu navegador.
-
-Para solucionarlo de raíz, he reescrito el código con una estructura de seguridad. He eliminado cualquier dependencia que pudiera fallar y he forzado al navegador a pintar el fondo desde el primer segundo.
-
-Borra todo y pega este código (es la versión más estable posible):
-
-HTML
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - Estabilidad Total</title>
+    <title>VOID - Mobile Pro</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
-        body { margin: 0; background: #050510; overflow: hidden; font-family: sans-serif; touch-action: none; color: white; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; touch-action: none; color: white; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
 
         #ui-layer {
@@ -23,46 +16,64 @@ HTML
         }
 
         .menu-box {
-            text-align: center; background: rgba(0,0,0,0.95); padding: 20px;
-            border-radius: 15px; border: 2px solid #333; pointer-events: auto;
-            width: 280px; display: none;
+            text-align: center; background: rgba(0,0,0,0.85); padding: 25px;
+            border-radius: 20px; border: 2px solid #333; backdrop-filter: blur(10px);
+            display: none; pointer-events: auto; width: 80%; max-width: 300px;
+            box-shadow: 0 0 30px rgba(0,255,255,0.1);
         }
 
+        h1 { font-size: 45px; letter-spacing: 10px; margin: 10px 0; text-shadow: 0 0 15px var(--neon); color: var(--neon); }
+        
         .btn {
             width: 100%; margin: 10px 0; padding: 15px;
             background: #111; color: white; border: 1px solid #444;
-            border-radius: 8px; font-weight: bold; cursor: pointer;
+            border-radius: 12px; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; font-size: 14px; transition: 0.2s;
         }
+        .btn:active { transform: scale(0.95); background: var(--neon); color: #000; }
+        .btn-main { border: 2px solid var(--pink); color: white; }
+
+        .lang-selector { position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 20; font-size: 12px; }
+        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid #444; color: white; padding: 5px 10px; border-radius: 5px; margin-left: 5px; }
+        .lang-active { border-color: var(--neon); color: var(--neon); }
         
-        .btn-main { border-color: var(--pink); color: var(--pink); }
+        .stats { margin-bottom: 15px; font-size: 14px; color: #aaa; }
     </style>
 </head>
 <body>
+
+    <div class="lang-selector">
+        <button id="l-es" class="lang-btn lang-active" onclick="setLanguage('es')">ESP</button>
+        <button id="l-en" class="lang-btn" onclick="setLanguage('en')">ENG</button>
+    </div>
 
     <canvas id="game"></canvas>
 
     <div id="ui-layer">
         <!-- MENÚ PRINCIPAL -->
         <div id="menu-main" class="menu-box" style="display: block;">
-            <h1 style="color: var(--neon); letter-spacing: 5px;">VOID</h1>
-            <p>BEST: <span id="val-best">0</span></p>
-            <button class="btn btn-main" onclick="showMenu('menu-play')">JUGAR / PLAY</button>
-            <button class="btn" onclick="alert('Tienda pronto')">TIENDA / STORE</button>
+            <h1>VOID</h1>
+            <div class="stats">
+                <span id="t-best">RÉCORD</span>: <span id="val-best">0</span>
+            </div>
+            <button class="btn btn-main" id="b-play" onclick="showMenu('menu-play')">JUGAR</button>
+            <button class="btn" id="b-store" onclick="alert('Shop coming soon')">TIENDA</button>
+            <button class="btn" id="b-opts" onclick="alert('Options coming soon')">OPCIONES</button>
         </div>
 
         <!-- SELECCIÓN MODO -->
         <div id="menu-play" class="menu-box">
-            <h2 style="color: var(--neon);">MODOS</h2>
-            <button class="btn btn-main" onclick="startGame()">INFINITO</button>
-            <button class="btn" onclick="showMenu('menu-main')">VOLVER</button>
+            <h2 id="t-modes" style="color:var(--neon)">MODOS</h2>
+            <button class="btn btn-main" id="b-inf" onclick="startGame()">INFINITO</button>
+            <button class="btn" id="b-back" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
 
         <!-- MUERTE -->
         <div id="menu-death" class="menu-box">
-            <h2 style="color: var(--pink);">GAME OVER</h2>
-            <p>SCORE: <span id="val-score">0</span></p>
-            <button class="btn btn-main" onclick="startGame()">REINTENTAR</button>
-            <button class="btn" onclick="showMenu('menu-main')">MENÚ</button>
+            <h2 id="t-over" style="color:var(--pink)">GAME OVER</h2>
+            <p><span id="t-score">PUNTOS</span>: <span id="val-score">0</span></p>
+            <button class="btn btn-main" id="b-retry" onclick="startGame()">REINTENTAR</button>
+            <button class="btn" id="b-menu" onclick="showMenu('menu-main')">MENÚ</button>
         </div>
     </div>
 
@@ -70,25 +81,47 @@ HTML
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     
-    let gameActive = false;
-    let score = 0;
-    let highScore = localStorage.getItem('voidHighScore') || 0;
-    let player, obstacles, frame = 0;
+    // --- TRADUCCIONES ---
+    const langData = {
+        es: { best: "RÉCORD", play: "JUGAR", store: "TIENDA", opts: "OPCIONES", modes: "MODOS", inf: "INFINITO", back: "VOLVER", over: "FIN DE PARTIDA", score: "PUNTOS", retry: "REINTENTAR", menu: "MENÚ" },
+        en: { best: "BEST", play: "PLAY", store: "STORE", opts: "OPTIONS", modes: "MODES", inf: "INFINITE", back: "BACK", over: "GAME OVER", score: "SCORE", retry: "RETRY", menu: "MENU" }
+    };
+
+    function setLanguage(l) {
+        const t = langData[l];
+        document.getElementById('t-best').innerText = t.best;
+        document.getElementById('b-play').innerText = t.play;
+        document.getElementById('b-store').innerText = t.store;
+        document.getElementById('b-opts').innerText = t.opts;
+        document.getElementById('t-modes').innerText = t.modes;
+        document.getElementById('b-inf').innerText = t.inf;
+        document.getElementById('b-back').innerText = t.back;
+        document.getElementById('t-over').innerText = t.over;
+        document.getElementById('t-score').innerText = t.score;
+        document.getElementById('b-retry').innerText = t.retry;
+        document.getElementById('b-menu').innerText = t.menu;
+        
+        document.getElementById('l-es').className = l === 'es' ? 'lang-btn lang-active' : 'lang-btn';
+        document.getElementById('l-en').className = l === 'en' ? 'lang-btn lang-active' : 'lang-btn';
+    }
+
+    // --- LÓGICA JUEGO ---
+    let gameActive = false, score = 0, frame = 0;
+    let player, obstacles = [], stars = [];
+    let highScore = localStorage.getItem('void_best') || 0;
 
     function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        stars = [];
+        for(let i=0; i<50; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2, v: Math.random()*0.5 + 0.1});
     }
     window.addEventListener('resize', resize);
     resize();
 
     function showMenu(id) {
-        // Ocultar todos los menús
-        document.getElementById('menu-main').style.display = 'none';
-        document.getElementById('menu-play').style.display = 'none';
-        document.getElementById('menu-death').style.display = 'none';
-        
-        if (id !== 'none') {
+        document.querySelectorAll('.menu-box').forEach(m => m.style.display = 'none');
+        if(id !== 'none') {
             document.getElementById(id).style.display = 'block';
             gameActive = false;
         } else {
@@ -97,7 +130,7 @@ HTML
     }
 
     function startGame() {
-        player = { x: 50, y: canvas.height / 2, size: 30, vy: 0, gravity: 0.6, jump: -10 };
+        player = { x: canvas.width * 0.15, y: canvas.height/2, size: 25, vy: 0, gravity: 0.6, jump: -9 };
         obstacles = [];
         score = 0;
         frame = 0;
@@ -105,74 +138,94 @@ HTML
     }
 
     function loop() {
-        // 1. Limpiar pantalla (Fondo)
+        // Fondo profundo
         ctx.fillStyle = '#050510';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Estrellas con movimiento paralaje
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        stars.forEach(s => {
+            ctx.fillRect(s.x, s.y, s.s, s.s);
+            if(gameActive) s.x -= s.v;
+            if(s.x < 0) s.x = canvas.width;
+        });
+
         if (gameActive) {
             frame++;
-            
-            // 2. Jugador
             player.vy += player.gravity;
             player.y += player.vy;
-            if (player.y + player.size > canvas.height || player.y < 0) {
-                gameActive = false;
-                if(score > highScore) {
-                    highScore = score;
-                    localStorage.setItem('voidHighScore', highScore);
-                    document.getElementById('val-best').innerText = highScore;
-                }
-                document.getElementById('val-score').innerText = score;
-                showMenu('menu-death');
+
+            if (player.y > canvas.height || player.y < 0) {
+                endGame();
             }
 
-            // 3. Obstáculos
-            if (frame % 100 === 0) {
-                let gap = 200;
-                let h = Math.random() * (canvas.height - gap - 100) + 50;
+            if (frame % 90 === 0) {
+                let gap = 190;
+                let h = Math.random() * (canvas.height - gap - 120) + 60;
                 obstacles.push({ x: canvas.width, y: 0, w: 50, h: h, p: false });
                 obstacles.push({ x: canvas.width, y: h + gap, w: 50, h: canvas.height, p: false });
             }
 
             obstacles.forEach((o, i) => {
-                o.x -= 5;
-                // Colisión simple
-                if (player.x < o.x + o.w && player.x + player.size > o.x && player.y < o.y + o.h && player.y + player.size > o.y) {
-                    gameActive = false;
-                    document.getElementById('val-score').innerText = score;
-                    showMenu('menu-death');
+                o.x -= (5 + score * 0.05);
+                
+                // Colisión con margen de seguridad
+                if (player.x + 5 < o.x + o.w && player.x + player.size - 5 > o.x && player.y + 5 < o.y + o.h && player.y + player.size - 5 > o.y) {
+                    endGame();
                 }
-                // Puntos
+                
                 if (!o.p && o.x < player.x) {
                     o.p = true;
                     if (i % 2 === 0) score++;
                 }
             });
-
-            // Borrar obstáculos fuera
             if (obstacles.length > 10) obstacles.splice(0, 2);
 
-            // 4. Dibujar elementos
-            ctx.fillStyle = '#00ffff';
+            // DIBUJO PRO: Jugador con Neon
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#00ffff";
+            ctx.fillStyle = "#00ffff";
             ctx.fillRect(player.x, player.y, player.size, player.size);
+            
+            // DIBUJO PRO: Obstáculos con borde
+            ctx.shadowColor = "#ff00ff";
+            ctx.fillStyle = "rgba(255, 0, 255, 0.2)";
+            ctx.strokeStyle = "#ff00ff";
+            ctx.lineWidth = 3;
+            obstacles.forEach(o => {
+                ctx.fillRect(o.x, o.y, o.w, o.h);
+                ctx.strokeRect(o.x, o.y, o.w, o.h);
+            });
+            ctx.shadowBlur = 0;
 
-            ctx.fillStyle = '#ff00ff';
-            obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
-
-            ctx.fillStyle = 'white';
-            ctx.font = '30px sans-serif';
-            ctx.fillText("Score: " + score, 20, 40);
+            // Score gigante al fondo
+            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.font = "bold 120px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
         }
 
         requestAnimationFrame(loop);
     }
 
-    window.addEventListener('pointerdown', () => {
+    function endGame() {
+        gameActive = false;
+        if(score > highScore) {
+            highScore = score;
+            localStorage.setItem('void_best', highScore);
+            document.getElementById('val-best').innerText = highScore;
+        }
+        document.getElementById('val-score').innerText = score;
+        showMenu('menu-death');
+    }
+
+    window.addEventListener('pointerdown', (e) => {
         if (gameActive) player.vy = player.jump;
     });
 
     document.getElementById('val-best').innerText = highScore;
-    loop(); // Inicia el bucle visual inmediatamente
+    setLanguage('es');
+    loop();
 </script>
 </body>
 </html>

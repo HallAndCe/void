@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; background: #000; touch-action: none; overflow: hidden; }
-        canvas { display: block; }
+        canvas { display: block; margin: 0 auto; }
     </style>
 </head>
 <body>
@@ -17,72 +17,75 @@ const config = {
     width: window.innerWidth,
     height: window.innerHeight,
     backgroundColor: '#000000',
-    physics: { default: 'arcade', arcade: { gravity: { y: 0 } } }, // CERO GRAVEDAD para evitar errores
+    physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
     scene: { preload: preload, create: create, update: update }
 };
 
 let player, obstacles, score = 0, scoreText, isGameOver = false, gameStarted = false;
-let playerSpeed = 500; // Velocidad fija
+let playerSpeed = 450; 
 const game = new Phaser.Game(config);
 
 function preload() {}
 
 function create() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = game.config.width;
+    const h = game.config.height;
 
-    // El jugador empieza en el centro
-    player = this.add.rectangle(w * 0.2, h / 2, 35, 35, 0x00ffff);
+    // Jugador
+    player = this.add.rectangle(w * 0.15, h / 2, 40, 40, 0x00ffff);
     this.physics.add.existing(player);
     player.body.setCollideWorldBounds(true);
     
     obstacles = this.physics.add.group();
 
-    let startText = this.add.text(w/2, h/2, 'TAP TO START', { fontSize: '32px', fill: '#fff' }).setOrigin(0.5);
+    // Texto de inicio más grande
+    let startText = this.add.text(w/2, h/2, 'TOUCH TO START', { fontSize: '40px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
 
     this.input.on('pointerdown', () => {
         if (!gameStarted) {
             gameStarted = true;
             startText.destroy();
-            player.body.setVelocityY(playerSpeed); // Empieza bajando
-            this.time.addEvent({ delay: 1200, callback: addObstacle, callbackScope: this, loop: true });
+            player.body.setVelocityY(playerSpeed);
+            // Generar obstáculo CADA SEGUNDO (muy rápido para probar)
+            this.timer = this.time.addEvent({ delay: 1000, callback: addObstacle, callbackScope: this, loop: true });
         } else if (!isGameOver) {
-            // INVERSIÓN DE VELOCIDAD PURA (Sin gravedad que lo frene)
-            let newVelocity = player.body.velocity.y * -1;
-            player.body.setVelocityY(newVelocity);
-            player.setFillStyle(newVelocity > 0 ? 0x00ffff : 0xff00ff);
+            player.body.setVelocityY(player.body.velocity.y * -1);
+            player.setFillStyle(player.body.velocity.y > 0 ? 0x00ffff : 0xff00ff);
         }
     });
 
-    scoreText = this.add.text(w/2, 80, '0', { fontSize: '80px', fill: '#fff' }).setOrigin(0.5).setAlpha(0.2);
+    scoreText = this.add.text(w/2, 100, '0', { fontSize: '100px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.1);
 }
 
 function addObstacle() {
     if (isGameOver) return;
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = game.config.width;
+    const h = game.config.height;
+    
+    // Alternar arriba y abajo de forma clara
     const isTop = Math.random() > 0.5;
-    const obsHeight = h * 0.35;
+    const obsHeight = h * 0.4; // El obstáculo ocupa casi la mitad de la pantalla
     const py = isTop ? 0 : h - obsHeight;
     
-    let obs = this.add.rectangle(w + 100, py + (obsHeight/2), 60, obsHeight, 0xffffff, 0.1);
-    obs.setStrokeStyle(3, 0xffffff);
+    // Aparecen desde la derecha (w) hacia la izquierda
+    let obs = this.add.rectangle(w + 100, py + (obsHeight/2), 80, obsHeight, 0xffffff);
     this.physics.add.existing(obs);
-    obs.body.setVelocityX(-400 - (score * 5));
+    obs.body.setVelocityX(-500); // Velocidad rápida para verlos pasar
     obstacles.add(obs);
 }
 
 function update() {
     if (isGameOver) return;
 
-    // Colisión
+    // Colisión muerte
     this.physics.add.overlap(player, obstacles, () => {
         isGameOver = true;
-        this.cameras.main.shake(200, 0.03);
-        setTimeout(() => { location.reload(); }, 500);
+        this.cameras.main.shake(300, 0.05);
+        this.time.removeAllEvents();
+        setTimeout(() => { location.reload(); }, 700);
     });
 
-    // Limpieza de obstáculos y puntos
+    // Puntos y limpieza
     obstacles.children.iterate(child => {
         if (child && child.x < -100) {
             child.destroy();

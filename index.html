@@ -1,48 +1,52 @@
+Es normal que te líes, el código se está haciendo grande. Para que no falles, lo mejor es que borres todo el contenido del <script> antiguo y pegues este bloque completo.
+
+He unificado la lógica de las skins, la explosión, la sacudida de pantalla y el escalado de móvil en un solo archivo final para que solo tengas que "copiar y pegar".
+
+Código Completo "VOID - Ultimate Skin Edition"
+Copia desde aquí hasta el final:
+
+HTML
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - PRO</title>
+    <title>VOID - ULTIMATE</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; transition: filter 0.3s ease; }
-        
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             color: white; pointer-events: none; z-index: 10;
         }
-        
         .menu-box {
-            text-align: center; background: rgba(0,0,0,0.7); padding: 30px;
-            border-radius: 20px; border: 1px solid #333; backdrop-filter: blur(5px);
+            text-align: center; background: rgba(0,0,0,0.8); padding: 30px;
+            border-radius: 20px; border: 1px solid #333; backdrop-filter: blur(8px);
             display: none; pointer-events: auto; width: 80%; max-width: 300px;
         }
-
-        #logo { max-width: 120px; border-radius: 15px; margin-bottom: 10px; border: 2px solid #00ffff; }
-        h1 { margin: 0; font-size: 40px; letter-spacing: 5px; color: #fff; text-shadow: 0 0 10px #00ffff; }
-        .btn-start { margin-top: 20px; padding: 12px 25px; background: #00ffff; color: #000; border: none; border-radius: 5px; font-weight: bold; text-transform: uppercase; cursor: pointer; }
+        #logo { max-width: 110px; border-radius: 15px; margin-bottom: 10px; border: 2px solid #00ffff; }
+        h1 { margin: 0; font-size: 38px; letter-spacing: 5px; color: #fff; text-shadow: 0 0 15px #00ffff; }
+        .btn-start { margin-top: 20px; padding: 12px 25px; background: #ff00ff; color: #fff; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px #ff00ff; }
+        #unlock-msg { font-weight: bold; margin-top: 10px; min-height: 20px; }
     </style>
 </head>
 <body>
     <canvas id="game"></canvas>
     
     <div id="ui-layer">
-        <!-- Menú Principal e Inicio -->
         <div id="main-menu" class="menu-box" style="display: block;">
             <img src="logo.jpg" id="logo" alt="Logo">
             <h1>VOID</h1>
             <p id="high-score-main">BEST: 0</p>
-            <button class="btn-start" onclick="startGame()">START</button>
+            <button class="btn-start" onclick="startGame()">JUGAR</button>
         </div>
 
-        <!-- Pantalla de Muerte -->
         <div id="death-screen" class="menu-box">
             <h2 id="final-score">SCORE: 0</h2>
             <p id="high-score-death">BEST: 0</p>
-            <p id="unlock-msg" style="font-size: 12px; color: #00ffff;"></p>
-            <button class="btn-start" onclick="startGame()">RETRY</button>
+            <div id="unlock-msg"></div>
+            <button class="btn-start" onclick="startGame()">REINTENTAR</button>
         </div>
     </div>
 
@@ -60,101 +64,57 @@
     let highScore = localStorage.getItem('voidHighScore') || 0;
     document.getElementById('high-score-main').innerText = "BEST: " + highScore;
 
-    let gameStarted = false;
-    let gameOver = false;
-    let frame = 0;
-    let gameSpeed = 0;
-    let shakeTimer = 0;
-
+    let gameStarted = false, gameOver = false, frame = 0, gameSpeed = 0, shakeTimer = 0;
     let player, obstacles, trail, stars, particles;
 
+    // --- LÓGICA DE SKINS ---
+    function getSkinTier(val) {
+        if (val >= 100) return 6; // Void God
+        if (val >= 75)  return 5; // Legend
+        if (val >= 50)  return 4; // Master
+        if (val >= 20)  return 3; // Electric
+        if (val >= 10)  return 2; // Neon
+        if (val >= 5)   return 1; // Scout
+        return 0;
+    }
+
     function init() {
-        player = { x: canvas.width * 0.2, y: canvas.height / 2, size: canvas.width < 500 ? 26 : 30, vy: 0, gravity: 0.6, jump: -11, angle: 0 };
-        obstacles = [];
-        trail = [];
-        particles = [];
-        stars = [];
+        const isMobile = canvas.width < 500;
+        player = { 
+            x: canvas.width * 0.2, y: canvas.height / 2, 
+            size: isMobile ? 26 : 30, vy: 0, gravity: 0.6, jump: -11, angle: 0 
+        };
+        obstacles = []; trail = []; particles = []; stars = [];
         for(let i = 0; i < 40; i++) stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 0.4 + 0.1 });
-        gameSpeed = canvas.width < 500 ? canvas.width * 0.008 : 5.5;
+        gameSpeed = isMobile ? canvas.width * 0.0085 : 5.5;
     }
 
     function startGame() {
         init();
-        score = 0;
-        frame = 0;
-        gameStarted = true;
-        gameOver = false;
+        score = 0; frame = 0;
+        gameStarted = true; gameOver = false;
         menu.style.display = 'none';
         deathScreen.style.display = 'none';
         canvas.style.filter = 'none';
     }
 
     function createExplosion(x, y) {
-        for(let i = 0; i < 15; i++) {
+        for(let i = 0; i < 20; i++) {
             particles.push({
-                x: x, y: y,
-                vx: (Math.random() - 0.5) * 10,
-                vy: (Math.random() - 0.5) * 10,
-                size: Math.random() * 8,
-                life: 1.0,
-                color: Math.random() > 0.5 ? '#00ffff' : '#ff00ff'
+                x: x, y: y, vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 12,
+                size: Math.random() * 6, life: 1.0, color: Math.random() > 0.5 ? '#00ffff' : '#ff00ff'
             });
-        }
-    }
-
-    function endGame() {
-        if (gameOver) return;
-        gameOver = true;
-        shakeTimer = 15; // Activa sacudida
-        createExplosion(player.x, player.y);
-        
-        if (score > highScore) {
-            highScore = score;
-            localStorage.setItem('voidHighScore', highScore);
-        }
-
-        setTimeout(() => {
-            document.getElementById('final-score').innerText = "SCORE: " + score;
-            document.getElementById('high-score-death').innerText = "BEST: " + highScore;
-            
-            // Mensajes de desbloqueo
-            let msg = "";
-            if (highScore < 20) msg = "NEXT SKIN AT 20";
-            else if (highScore < 50) msg = "ELECTRIC SKIN ACTIVE!";
-            else msg = "GOD SKIN ACTIVE!";
-            document.getElementById('unlock-msg').innerText = msg;
-
-            deathScreen.style.display = 'block';
-            canvas.style.filter = 'blur(10px) brightness(0.4)';
-        }, 800);
-    }
-
-    function spawnObstacle() {
-        const type = Math.random();
-        const w = canvas.width < 500 ? 50 : 65;
-        const gap = canvas.width < 500 ? 175 : 195;
-        const obsColor = Math.random() > 0.5 ? '#ff00ff' : '#00ffff';
-        
-        if (type < 0.45) {
-            const gateY = Math.random() * (canvas.height - gap - 160) + 80;
-            obstacles.push({ x: canvas.width + 100, y: 0, w: w, h: gateY, edge: obsColor });
-            obstacles.push({ x: canvas.width + 100, y: gateY + gap, w: w, h: canvas.height - (gateY + gap), edge: obsColor });
-        } else {
-            const h = Math.random() * (canvas.height * 0.3) + 140;
-            const isTop = Math.random() > 0.5;
-            obstacles.push({ x: canvas.width + 100, y: isTop ? 0 : canvas.height - h, w: w, h: h, edge: obsColor });
         }
     }
 
     function update() {
         if (!gameStarted || gameOver) {
-            // Animación de partículas incluso en game over
             particles.forEach((p, i) => {
                 p.x += p.vx; p.y += p.vy; p.life -= 0.02;
                 if(p.life <= 0) particles.splice(i, 1);
             });
             return;
-        };
+        }
 
         frame++;
         player.vy += player.gravity;
@@ -163,15 +123,15 @@
 
         stars.forEach(s => { s.x -= s.speed; if(s.x < 0) s.x = canvas.width; });
 
+        // Estela adaptativa según Skin
         trail.push({ x: player.x, y: player.y, angle: player.angle });
-        // Longitud de estela según skin (Highscore)
-        let trailMax = highScore > 50 ? 25 : 12;
-        if (trail.length > trailMax) trail.shift();
+        let maxTrail = 10 + (getSkinTier(highScore) * 4);
+        if (trail.length > maxTrail) trail.shift();
 
         if (player.y < 0 || player.y + player.size > canvas.height) endGame();
 
-        let spawnRate = canvas.width < 500 ? 95 : 80;
-        if (frame % Math.max(30, Math.floor(spawnRate - score * 0.7)) === 0) spawnObstacle();
+        let spawnRate = canvas.width < 500 ? 95 : 82;
+        if (frame % Math.max(32, Math.floor(spawnRate - score * 0.7)) === 0) spawnObstacle();
 
         obstacles.forEach((obs, index) => {
             obs.x -= (gameSpeed + score * 0.22);
@@ -185,88 +145,103 @@
         });
     }
 
+    function spawnObstacle() {
+        const w = canvas.width < 500 ? 52 : 65;
+        const gap = canvas.width < 500 ? 175 : 195;
+        const obsColor = Math.random() > 0.5 ? '#ff00ff' : '#00ffff';
+        if (Math.random() < 0.45) {
+            const gateY = Math.random() * (canvas.height - gap - 160) + 80;
+            obstacles.push({ x: canvas.width + 100, y: 0, w: w, h: gateY, edge: obsColor });
+            obstacles.push({ x: canvas.width + 100, y: gateY + gap, w: w, h: canvas.height - (gateY + gap), edge: obsColor });
+        } else {
+            const h = Math.random() * (canvas.height * 0.3) + 140;
+            const isTop = Math.random() > 0.5;
+            obstacles.push({ x: canvas.width + 100, y: isTop ? 0 : canvas.height - h, w: w, h: h, edge: obsColor });
+        }
+    }
+
+    function endGame() {
+        if (gameOver) return;
+        gameOver = true; shakeTimer = 18;
+        createExplosion(player.x, player.y);
+        
+        const oldTier = getSkinTier(highScore);
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('voidHighScore', highScore);
+        }
+        const newTier = getSkinTier(highScore);
+
+        setTimeout(() => {
+            document.getElementById('final-score').innerText = "SCORE: " + score;
+            document.getElementById('high-score-death').innerText = "BEST: " + highScore;
+            
+            const goals = [5, 10, 20, 50, 75, 100];
+            let next = goals.find(g => g > highScore);
+            let msg = newTier > oldTier ? "¡NUEVA SKIN!" : (next ? `SIGUIENTE SKIN EN ${next}` : "DIOS DEL VACÍO");
+            document.getElementById('unlock-msg').innerText = msg;
+            document.getElementById('unlock-msg').style.color = newTier > oldTier ? "#0f0" : "#0ff";
+
+            deathScreen.style.display = 'block';
+            canvas.style.filter = 'blur(8px) brightness(0.4)';
+        }, 700);
+    }
+
     function draw() {
         ctx.save();
-        // Efecto Screen Shake
-        if (shakeTimer > 0) {
-            ctx.translate(Math.random()*8 - 4, Math.random()*8 - 4);
-            shakeTimer--;
-        }
+        if (shakeTimer > 0) { ctx.translate(Math.random()*10-5, Math.random()*10-5); shakeTimer--; }
 
         let grdBg = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 5, canvas.width/2, canvas.height/2, canvas.width);
         grdBg.addColorStop(0, "#0a0a1a"); grdBg.addColorStop(1, "#000");
-        ctx.fillStyle = grdBg;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = grdBg; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Estrellas
-        ctx.fillStyle = "#fff";
-        stars.forEach(s => { ctx.globalAlpha = 0.2; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill(); });
+        ctx.fillStyle = "white";
+        stars.forEach(s => { ctx.globalAlpha = 0.2; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI*2); ctx.fill(); });
+        ctx.globalAlpha = 0.04; ctx.font = `bold ${canvas.width < 500 ? '120px' : '200px'} sans-serif`;
+        ctx.textAlign = 'center'; ctx.fillText(score, canvas.width/2, canvas.height/2 + 70);
         ctx.globalAlpha = 1.0;
 
-        // Score fondo
-        ctx.fillStyle = 'rgba(255,255,255,0.03)';
-        ctx.font = `bold ${canvas.width < 500 ? '120px' : '200px'} sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
+        const tier = getSkinTier(highScore);
 
-        // Estela
+        // Dibujar Estela
         trail.forEach((t, i) => {
             ctx.save(); ctx.translate(t.x + player.size/2, t.y + player.size/2); ctx.rotate(t.angle);
-            ctx.globalAlpha = i / trail.length * 0.3;
-            let pGrd = ctx.createLinearGradient(-player.size/2, -player.size/2, player.size/2, player.size/2);
-            pGrd.addColorStop(0, '#00ffff'); pGrd.addColorStop(1, '#ff00ff');
-            ctx.fillStyle = pGrd;
-            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.globalAlpha = (i / trail.length) * 0.4;
+            let g = ctx.createLinearGradient(-player.size/2, -player.size/2, player.size/2, player.size/2);
+            g.addColorStop(0, '#0ff'); g.addColorStop(1, '#f0f');
+            ctx.fillStyle = g; ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
             ctx.restore();
         });
-        ctx.globalAlpha = 1.0;
 
-        // Jugador (si no ha muerto)
+        // Dibujar Jugador
         if (!gameOver) {
             ctx.save();
-            ctx.translate(player.x + player.size/2, player.y + player.size/2);
-            ctx.rotate(player.angle);
-            let pGrd = ctx.createLinearGradient(-player.size/2, -player.size/2, player.size/2, player.size/2);
-            pGrd.addColorStop(0, '#00ffff'); pGrd.addColorStop(1, '#ff00ff');
+            ctx.translate(player.x + player.size/2, player.y + player.size/2); ctx.rotate(player.angle);
             
-            // Efecto Skin Electric (+20 pts)
-            if(highScore >= 20) {
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#fff';
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
-            } else {
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#00ffff';
-            }
+            // Efectos de Skin (Tier)
+            if(tier >= 2) { ctx.shadowBlur = 10 + tier*2; ctx.shadowColor = '#0ff'; }
+            if(tier >= 4) { ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeRect(-player.size/2-2, -player.size/2-2, player.size+4, player.size+4); }
             
-            ctx.fillStyle = pGrd;
-            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
-            ctx.fillStyle = '#fff';
+            let g = ctx.createLinearGradient(-player.size/2, -player.size/2, player.size/2, player.size/2);
+            g.addColorStop(0, '#0ff'); g.addColorStop(1, '#f0f');
+            ctx.fillStyle = g; ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+            
+            ctx.fillStyle = (tier >= 1) ? '#0ff' : '#fff';
             ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
+            
+            if(tier >= 6 && Math.random() > 0.7) { // Aura Dios
+                particles.push({ x: player.x+15, y: player.y+15, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4, size: 2, life: 0.4, color: '#fff' });
+            }
             ctx.restore();
         }
 
-        // Partículas de explosión
-        particles.forEach(p => {
-            ctx.globalAlpha = p.life;
-            ctx.fillStyle = p.color;
-            ctx.fillRect(p.x, p.y, p.size, p.size);
-        });
+        particles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size); });
         ctx.globalAlpha = 1.0;
 
-        // Obstáculos
         obstacles.forEach(obs => {
-            ctx.fillStyle = '#0a0a0a';
-            ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-            ctx.strokeStyle = obs.edge;
-            ctx.lineWidth = 3;
-            ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-            ctx.globalAlpha = 0.15;
-            ctx.fillStyle = obs.edge;
-            ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = '#0a0a0a'; ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+            ctx.strokeStyle = obs.edge; ctx.lineWidth = 3; ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+            ctx.globalAlpha = 0.1; ctx.fillStyle = obs.edge; ctx.fillRect(obs.x, obs.y, obs.w, obs.h); ctx.globalAlpha = 1.0;
         });
 
         ctx.restore();
@@ -274,12 +249,8 @@
         requestAnimationFrame(draw);
     }
 
-    window.addEventListener('pointerdown', (e) => {
-        if (gameStarted && !gameOver) player.vy = player.jump;
-    });
-
-    init();
-    draw();
+    window.addEventListener('pointerdown', () => { if (gameStarted && !gameOver) player.vy = player.jump; });
+    init(); draw();
 </script>
 </body>
 </html>

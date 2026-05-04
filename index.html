@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - Mobile Pro</title>
+    <title>VOID - Ultimate Edition</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; touch-action: none; color: white; }
+        body { margin: 0; background: #050510; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; touch-action: none; color: white; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
 
         #ui-layer {
@@ -34,7 +34,7 @@
         .btn-main { border: 2px solid var(--pink); color: white; }
 
         .lang-selector { position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 20; font-size: 12px; }
-        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid #444; color: white; padding: 5px 10px; border-radius: 5px; margin-left: 5px; }
+        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid #444; color: white; padding: 5px 10px; border-radius: 5px; margin-left: 5px; cursor: pointer; }
         .lang-active { border-color: var(--neon); color: var(--neon); }
         
         .stats { margin-bottom: 15px; font-size: 14px; color: #aaa; }
@@ -50,25 +50,21 @@
     <canvas id="game"></canvas>
 
     <div id="ui-layer">
-        <!-- MENÚ PRINCIPAL -->
         <div id="menu-main" class="menu-box" style="display: block;">
             <h1>VOID</h1>
             <div class="stats">
                 <span id="t-best">RÉCORD</span>: <span id="val-best">0</span>
             </div>
             <button class="btn btn-main" id="b-play" onclick="showMenu('menu-play')">JUGAR</button>
-            <button class="btn" id="b-store" onclick="alert('Shop coming soon')">TIENDA</button>
-            <button class="btn" id="b-opts" onclick="alert('Options coming soon')">OPCIONES</button>
+            <button class="btn" id="b-store" onclick="alert('Store logic next!')">TIENDA</button>
         </div>
 
-        <!-- SELECCIÓN MODO -->
         <div id="menu-play" class="menu-box">
             <h2 id="t-modes" style="color:var(--neon)">MODOS</h2>
             <button class="btn btn-main" id="b-inf" onclick="startGame()">INFINITO</button>
             <button class="btn" id="b-back" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
 
-        <!-- MUERTE -->
         <div id="menu-death" class="menu-box">
             <h2 id="t-over" style="color:var(--pink)">GAME OVER</h2>
             <p><span id="t-score">PUNTOS</span>: <span id="val-score">0</span></p>
@@ -81,10 +77,9 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     
-    // --- TRADUCCIONES ---
     const langData = {
-        es: { best: "RÉCORD", play: "JUGAR", store: "TIENDA", opts: "OPCIONES", modes: "MODOS", inf: "INFINITO", back: "VOLVER", over: "FIN DE PARTIDA", score: "PUNTOS", retry: "REINTENTAR", menu: "MENÚ" },
-        en: { best: "BEST", play: "PLAY", store: "STORE", opts: "OPTIONS", modes: "MODES", inf: "INFINITE", back: "BACK", over: "GAME OVER", score: "SCORE", retry: "RETRY", menu: "MENU" }
+        es: { best: "RÉCORD", play: "JUGAR", store: "TIENDA", modes: "MODOS", inf: "INFINITO", back: "VOLVER", over: "FIN DE PARTIDA", score: "PUNTOS", retry: "REINTENTAR", menu: "MENÚ" },
+        en: { best: "BEST", play: "PLAY", store: "STORE", modes: "MODES", inf: "INFINITE", back: "BACK", over: "GAME OVER", score: "SCORE", retry: "RETRY", menu: "MENU" }
     };
 
     function setLanguage(l) {
@@ -92,7 +87,6 @@
         document.getElementById('t-best').innerText = t.best;
         document.getElementById('b-play').innerText = t.play;
         document.getElementById('b-store').innerText = t.store;
-        document.getElementById('b-opts').innerText = t.opts;
         document.getElementById('t-modes').innerText = t.modes;
         document.getElementById('b-inf').innerText = t.inf;
         document.getElementById('b-back').innerText = t.back;
@@ -100,14 +94,12 @@
         document.getElementById('t-score').innerText = t.score;
         document.getElementById('b-retry').innerText = t.retry;
         document.getElementById('b-menu').innerText = t.menu;
-        
         document.getElementById('l-es').className = l === 'es' ? 'lang-btn lang-active' : 'lang-btn';
         document.getElementById('l-en').className = l === 'en' ? 'lang-btn lang-active' : 'lang-btn';
     }
 
-    // --- LÓGICA JUEGO ---
     let gameActive = false, score = 0, frame = 0;
-    let player, obstacles = [], stars = [];
+    let player, obstacles = [], stars = [], trail = [];
     let highScore = localStorage.getItem('void_best') || 0;
 
     function resize() {
@@ -130,20 +122,19 @@
     }
 
     function startGame() {
-        trail = [];
-        player = { x: canvas.width * 0.15, y: canvas.height/2, size: 25, vy: 0, gravity: 0.6, jump: -9 };
+        player = { x: canvas.width * 0.15, y: canvas.height/2, size: 28, vy: 0, gravity: 0.6, jump: -9 };
         obstacles = [];
+        trail = [];
         score = 0;
         frame = 0;
         showMenu('none');
     }
 
     function loop() {
-        // Fondo profundo
         ctx.fillStyle = '#050510';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Estrellas con movimiento paralaje
+        // Estrellas
         ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
         stars.forEach(s => {
             ctx.fillRect(s.x, s.y, s.s, s.s);
@@ -151,16 +142,37 @@
             if(s.x < 0) s.x = canvas.width;
         });
 
-        if (gameActive) {
-            frame++;
-            player.vy += player.gravity;
-            player.y += player.vy;
-
-            if (player.y > canvas.height || player.y < 0) {
-                endGame();
+        if (gameActive || document.getElementById('menu-death').style.display === 'block') {
+            if(gameActive) {
+                frame++;
+                trail.push({x: player.x, y: player.y});
+                if(trail.length > 12) trail.shift();
             }
 
-            if (frame % 90 === 0) {
+            // DIBUJO JUGADOR PRO
+            ctx.save();
+            ctx.translate(player.x + player.size/2, player.y + player.size/2);
+            ctx.rotate(player.vy * 0.04);
+
+            // Estela
+            trail.forEach((t, i) => {
+                ctx.fillStyle = `rgba(0, 255, 255, ${i/25})`;
+                ctx.fillRect(-player.size/2 + (i-12), -player.size/2, player.size, player.size);
+            });
+
+            // Cuerpo Neon
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "#00ffff";
+            ctx.strokeStyle = "#00ffff";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.fillStyle = "white";
+            ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
+            ctx.restore();
+            ctx.shadowBlur = 0;
+
+            // Obstáculos
+            if(gameActive && frame % 90 === 0) {
                 let gap = 190;
                 let h = Math.random() * (canvas.height - gap - 120) + 60;
                 obstacles.push({ x: canvas.width, y: 0, w: 50, h: h, p: false });
@@ -168,44 +180,35 @@
             }
 
             obstacles.forEach((o, i) => {
-                o.x -= (5 + score * 0.05);
-                
-                // Colisión con margen de seguridad
-                if (player.x + 5 < o.x + o.w && player.x + player.size - 5 > o.x && player.y + 5 < o.y + o.h && player.y + player.size - 5 > o.y) {
-                    endGame();
-                }
-                
-                if (!o.p && o.x < player.x) {
-                    o.p = true;
-                    if (i % 2 === 0) score++;
-                }
-            });
-            if (obstacles.length > 10) obstacles.splice(0, 2);
-
-            // DIBUJO PRO: Jugador con Neon
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = "#00ffff";
-            ctx.fillStyle = "#00ffff";
-            ctx.fillRect(player.x, player.y, player.size, player.size);
-            
-            // DIBUJO PRO: Obstáculos con borde
-            ctx.shadowColor = "#ff00ff";
-            ctx.fillStyle = "rgba(255, 0, 255, 0.2)";
-            ctx.strokeStyle = "#ff00ff";
-            ctx.lineWidth = 3;
-            obstacles.forEach(o => {
+                if(gameActive) o.x -= (5 + score * 0.05);
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = "#ff00ff";
+                ctx.fillStyle = "rgba(255, 0, 255, 0.15)";
+                ctx.strokeStyle = "#ff00ff";
+                ctx.lineWidth = 3;
                 ctx.fillRect(o.x, o.y, o.w, o.h);
                 ctx.strokeRect(o.x, o.y, o.w, o.h);
+                
+                if (gameActive && player.x + 5 < o.x + o.w && player.x + player.size - 5 > o.x && player.y + 5 < o.y + o.h && player.y + player.size - 5 > o.y) {
+                    endGame();
+                }
+                if (gameActive && !o.p && o.x < player.x) { o.p = true; if (i % 2 === 0) score++; }
             });
+            if (obstacles.length > 10) obstacles.splice(0, 2);
             ctx.shadowBlur = 0;
 
-            // Score gigante al fondo
+            // Score
             ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
             ctx.font = "bold 120px sans-serif";
             ctx.textAlign = "center";
             ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
         }
 
+        if(gameActive) {
+            player.vy += player.gravity;
+            player.y += player.vy;
+            if (player.y > canvas.height || player.y < 0) endGame();
+        }
         requestAnimationFrame(loop);
     }
 
@@ -220,105 +223,10 @@
         showMenu('menu-death');
     }
 
-    window.addEventListener('pointerdown', (e) => {
-        if (gameActive) player.vy = player.jump;
-    });
-
+    window.addEventListener('pointerdown', () => { if(gameActive) player.vy = player.jump; });
     document.getElementById('val-best').innerText = highScore;
     setLanguage('es');
-    // --- NUEVO MOTOR VISUAL PRO ---
-    let trail = []; // Esta línea guárdala justo arriba de la función loop
-
-    function loop() {
-        // 1. Limpiar pantalla con fondo espacial
-        ctx.fillStyle = '#050510';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // 2. Estrellas de fondo con movimiento
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-        stars.forEach(s => {
-            ctx.fillRect(s.x, s.y, s.s, s.s);
-            if(gameActive) s.x -= s.v;
-            if(s.x < 0) s.x = canvas.width;
-        });
-
-        if (gameActive || document.getElementById('menu-death').style.display === 'block') {
-            
-            // --- ESTELA DEL JUGADOR (TRAIL) ---
-            if(gameActive) {
-                frame++;
-                trail.push({x: player.x, y: player.y, opacity: 1});
-                if(trail.length > 12) trail.shift();
-            }
-
-            // --- DIBUJO DEL JUGADOR REMODELADO ---
-            ctx.save();
-            // Lo movemos a su posición y lo hacemos girar según su caída
-            ctx.translate(player.x + player.size/2, player.y + player.size/2);
-            let angle = player.vy * 0.04; 
-            ctx.rotate(angle);
-
-            // Dibujar rastro de energía
-            trail.forEach((t, i) => {
-                ctx.fillStyle = `rgba(0, 255, 255, ${i/25})`;
-                ctx.fillRect(-player.size/2 + (i-12), -player.size/2, player.size, player.size);
-            });
-
-            // Cuerpo del jugador: Marco de Neón
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "#00ffff";
-            ctx.strokeStyle = "#00ffff";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
-            
-            // Núcleo de energía central
-            ctx.fillStyle = "white";
-            ctx.shadowBlur = 10;
-            ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
-            ctx.restore();
-            ctx.shadowBlur = 0; 
-
-            // --- DIBUJO DE OBSTÁCULOS PRO ---
-            obstacles.forEach((o, i) => {
-                o.x -= (5 + score * 0.05);
-                
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = "#ff00ff";
-                ctx.fillStyle = "rgba(255, 0, 255, 0.15)";
-                ctx.strokeStyle = "#ff00ff";
-                ctx.lineWidth = 3;
-                ctx.fillRect(o.x, o.y, o.w, o.h);
-                ctx.strokeRect(o.x, o.y, o.w, o.h);
-                
-                // Colisión (con un margen pequeño para que sea más justo)
-                if (player.x + 5 < o.x + o.w && player.x + player.size - 5 > o.x && 
-                    player.y + 5 < o.y + o.h && player.y + player.size - 5 > o.y) {
-                    endGame();
-                }
-
-                if (!o.p && o.x < player.x) {
-                    o.p = true;
-                    if (i % 2 === 0) score++;
-                }
-            });
-            ctx.shadowBlur = 0;
-
-            // Puntuación fantasma al fondo
-            ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-            ctx.font = "bold 120px sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
-        }
-
-        // FÍSICAS
-        if(gameActive) {
-            player.vy += player.gravity;
-            player.y += player.vy;
-            if (player.y > canvas.height || player.y < 0) endGame();
-        }
-
-        requestAnimationFrame(loop);
-    }
+    loop();
 </script>
 </body>
 </html>

@@ -3,45 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - Profesional Edition</title>
+    <title>VOID - Profesional</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; }
         canvas { display: block; }
 
-        /* Contenedor de Interfaz */
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; align-items: center; justify-content: center;
             pointer-events: none; z-index: 10;
         }
 
-        /* Cajas de Menú */
         .menu-box {
             text-align: center; background: rgba(0,0,0,0.9); padding: 25px;
             border-radius: 20px; border: 2px solid #333; backdrop-filter: blur(10px);
-            display: none; pointer-events: auto; width: 85%; max-width: 350px;
-            box-shadow: 0 0 20px rgba(0,255,255,0.2);
+            display: none; pointer-events: auto; width: 85%; max-width: 320px;
         }
 
-        h1 { font-size: 45px; letter-spacing: 8px; margin: 10px 0; text-shadow: 0 0 15px var(--neon); }
-        h2 { color: var(--neon); margin-top: 0; }
-
-        /* Botones Profesionales */
+        h1 { font-size: 40px; letter-spacing: 8px; margin: 10px 0; text-shadow: 0 0 15px var(--neon); }
+        
         .btn {
             width: 100%; margin: 8px 0; padding: 12px;
             background: #111; color: white; border: 1px solid #444;
             border-radius: 8px; font-weight: bold; cursor: pointer;
-            transition: 0.3s; text-transform: uppercase;
+            text-transform: uppercase; transition: 0.2s;
         }
         .btn:active { transform: scale(0.95); background: var(--neon); color: #000; }
-        .btn-main { border: 2px solid var(--pink); box-shadow: 0 0 10px rgba(255,0,255,0.3); }
-        
-        /* Layout Tienda y Opciones */
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .stat-bar { background: #222; padding: 10px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; }
-        
-        input[type=range] { width: 100%; accent-color: var(--neon); }
+        .btn-main { border: 2px solid var(--pink); }
+
+        .stat-bar { background: #1a1a1a; padding: 10px; border-radius: 10px; margin-bottom: 15px; display: flex; justify-content: space-around; font-size: 14px; }
+        .lang-selector { margin-bottom: 15px; font-size: 12px; color: #888; }
+        .lang-selector span { cursor: pointer; margin: 0 5px; padding: 2px 5px; border: 1px solid #444; }
+        .lang-active { color: var(--neon); border-color: var(--neon) !important; }
     </style>
 </head>
 <body>
@@ -49,105 +43,188 @@
     <canvas id="game"></canvas>
 
     <div id="ui-layer">
-        
         <!-- 1. MENÚ PRINCIPAL -->
         <div id="menu-main" class="menu-box" style="display: block;">
+            <div class="lang-selector">
+                <span id="lang-es" onclick="setLanguage('es')">ESP</span> | 
+                <span id="lang-en" onclick="setLanguage('en')">ENG</span>
+            </div>
             <h1>VOID</h1>
             <div class="stat-bar">
-                <span>🏆 <span id="val-best">0</span></span>
+                <span id="txt-best-label">BEST</span>: <span id="val-best">0</span>
                 <span>💰 <span id="val-coins">0</span></span>
             </div>
-            <button class="btn btn-main" onclick="showMenu('menu-play')">JUGAR</button>
-            <button class="btn" onclick="showMenu('menu-store')">TIENDA</button>
-            <button class="btn" onclick="showMenu('menu-options')">OPCIONES</button>
+            <button class="btn btn-main" id="btn-play" onclick="showMenu('menu-play')">JUGAR</button>
+            <button class="btn" id="btn-store" onclick="showMenu('menu-store')">TIENDA</button>
+            <button class="btn" id="btn-opts" onclick="showMenu('menu-options')">OPCIONES</button>
         </div>
 
-        <!-- 2. MENÚ SELECCIÓN MODO -->
+        <!-- 2. SELECCIÓN DE MODO -->
         <div id="menu-play" class="menu-box">
-            <h2>MODO DE JUEGO</h2>
-            <button class="btn" onclick="startGame('infinito')">MODO INFINITO</button>
-            <button class="btn" onclick="alert('Próximamente: 10 Niveles')">MODO NIVELES</button>
-            <button class="btn" onclick="showMenu('menu-main')" style="color: var(--pink)">VOLVER</button>
+            <h2 id="txt-modes">MODOS</h2>
+            <button class="btn" id="btn-inf" onclick="startGame('infinito')">INFINITO</button>
+            <button class="btn" id="btn-levels" style="opacity: 0.5" onclick="alert('Próximamente')">NIVELES</button>
+            <button class="btn" id="btn-back1" onclick="showMenu('menu-main')" style="color: var(--pink)">VOLVER</button>
         </div>
 
-        <!-- 3. TIENDA -->
-        <div id="menu-store" class="menu-box">
-            <h2>TIENDA</h2>
-            <p>Skins por mérito</p>
-            <div class="grid-2">
-                <button class="btn" style="font-size: 10px;" onclick="changeSkin('square')">CUADRADO</button>
-                <button class="btn" style="font-size: 10px;" onclick="changeSkin('circle')">CÍRCULO</button>
-            </div>
-            <p style="color: gold;">Skins Premium (Pago)</p>
-            <button class="btn" onclick="alert('Conectando con pasarela de pago...')">Skin Dorada (0.99€)</button>
-            <button class="btn" onclick="showMenu('menu-main')" style="margin-top:10px;">VOLVER</button>
-        </div>
-
-        <!-- 4. OPCIONES -->
-        <div id="menu-options" class="menu-box">
-            <h2>OPCIONES</h2>
-            <label>VOLUMEN MÚSICA</label>
-            <input type="range" min="0" max="100" value="70">
-            <br><br>
-            <label>EFECTOS ESPECIALES</label>
-            <input type="range" min="0" max="100" value="90">
-            <button class="btn" onclick="showMenu('menu-main')" style="margin-top:20px;">GUARDAR</button>
-        </div>
-
-        <!-- 5. PANTALLA DE MUERTE -->
+        <!-- 3. MUERTE -->
         <div id="menu-death" class="menu-box">
-            <h2 id="death-score">PUNTOS: 0</h2>
-            <button class="btn btn-main" onclick="startGame()">REINTENTAR</button>
-            <button class="btn" onclick="showMenu('menu-main')">MENÚ</button>
+            <h2 id="txt-gameover">FIN DE PARTIDA</h2>
+            <div class="stat-bar">
+                <span id="txt-score-label">SCORE</span>: <span id="val-score-death">0</span>
+            </div>
+            <button class="btn btn-main" id="btn-retry" onclick="startGame('infinito')">REINTENTAR</button>
+            <button class="btn" id="btn-back2" onclick="showMenu('menu-main')">MENÚ</button>
         </div>
-
+        
+        <!-- TIENDA Y OPCIONES (VACIÍOS POR AHORA) -->
+        <div id="menu-store" class="menu-box">
+            <h2 id="btn-store2">TIENDA</h2>
+            <p>Próximamente...</p>
+            <button class="btn" onclick="showMenu('menu-main')">VOLVER</button>
+        </div>
+        <div id="menu-options" class="menu-box">
+            <h2 id="btn-opts2">OPCIONES</h2>
+            <p>Ajustes de audio aquí</p>
+            <button class="btn" onclick="showMenu('menu-main')">VOLVER</button>
+        </div>
     </div>
 
 <script>
-    // --- LÓGICA DE NAVEGACIÓN (Lo que pediste) ---
-    function showMenu(menuId) {
-        // Cerramos todos los menús
-        document.querySelectorAll('.menu-box').forEach(m => m.style.display = 'none');
-        // Abrimos el que queremos
-        document.getElementById(menuId).style.display = 'block';
-        // Pausamos o desenfocamos el fondo
-        document.getElementById('game').style.filter = menuId === 'menu-main' ? 'none' : 'blur(10px) brightness(0.5)';
+    // --- SISTEMA DE IDIOMAS ---
+    const texts = {
+        es: { best: "RÉCORD", play: "JUGAR", store: "TIENDA", opts: "OPCIONES", modes: "MODOS", inf: "INFINITO", levels: "NIVELES", back: "VOLVER", gameover: "FIN DE PARTIDA", score: "PUNTOS", retry: "REINTENTAR" },
+        en: { best: "BEST", play: "PLAY", store: "STORE", opts: "OPTIONS", modes: "MODES", inf: "INFINITE", levels: "LEVELS", back: "BACK", gameover: "GAME OVER", score: "SCORE", retry: "RETRY" }
+    };
+    let currentLang = 'es';
+
+    function setLanguage(lang) {
+        currentLang = lang;
+        document.getElementById('txt-best-label').innerText = texts[lang].best;
+        document.getElementById('btn-play').innerText = texts[lang].play;
+        document.getElementById('btn-store').innerText = texts[lang].store;
+        document.getElementById('btn-opts').innerText = texts[lang].opts;
+        document.getElementById('txt-modes').innerText = texts[lang].modes;
+        document.getElementById('btn-inf').innerText = texts[lang].inf;
+        document.getElementById('btn-levels').innerText = texts[lang].levels;
+        document.getElementById('btn-back1').innerText = texts[lang].back;
+        document.getElementById('btn-back2').innerText = texts[lang].back;
+        document.getElementById('txt-gameover').innerText = texts[lang].gameover;
+        document.getElementById('txt-score-label').innerText = texts[lang].score;
+        document.getElementById('btn-retry').innerText = texts[lang].retry;
+        document.getElementById('btn-store2').innerText = texts[lang].store;
+        document.getElementById('btn-opts2').innerText = texts[lang].opts;
+        
+        document.getElementById('lang-es').className = lang === 'es' ? 'lang-active' : '';
+        document.getElementById('lang-en').className = lang === 'en' ? 'lang-active' : '';
     }
 
-    // --- AQUÍ IRÍA TODA LA LÓGICA DEL JUEGO QUE YA TENÍAMOS ---
-    // (La mantendremos igual pero adaptada a esta estructura)
-
+    // --- MOTOR DEL JUEGO (MODO INFINITO) ---
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
+    let gameStarted = false, gameOver = false, score = 0, frame = 0, shake = 0;
+    let player, obstacles, stars, particles, trail;
+    let highScore = localStorage.getItem('voidHighScore') || 0;
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     window.addEventListener('resize', resize);
     resize();
 
-    let highScore = localStorage.getItem('voidHighScore') || 0;
+    function initGame() {
+        player = { x: canvas.width * 0.2, y: canvas.height / 2, size: 28, vy: 0, gravity: 0.6, jump: -10, angle: 0 };
+        obstacles = []; stars = []; particles = []; trail = [];
+        for(let i=0; i<30; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*2});
+        score = 0; frame = 0;
+    }
+
+    function showMenu(id) {
+        document.querySelectorAll('.menu-box').forEach(m => m.style.display = 'none');
+        if(id !== 'none') document.getElementById(id).style.display = 'block';
+        gameStarted = (id === 'none');
+        canvas.style.filter = gameStarted ? 'none' : 'blur(10px) brightness(0.4)';
+    }
+
+    function startGame(mode) {
+        initGame();
+        gameOver = false;
+        showMenu('none');
+    }
+
+    function endGame() {
+        gameOver = true;
+        gameStarted = false;
+        shake = 15;
+        if(score > highScore) { 
+            highScore = score; 
+            localStorage.setItem('voidHighScore', highScore);
+            document.getElementById('val-best').innerText = highScore;
+        }
+        document.getElementById('val-score-death').innerText = score;
+        setTimeout(() => showMenu('menu-death'), 800);
+    }
+
+    function update() {
+        if(!gameStarted) return;
+        frame++;
+        player.vy += player.gravity;
+        player.y += player.vy;
+        player.angle = Math.min(Math.PI/4, Math.max(-Math.PI/4, player.vy * 0.04));
+
+        if(player.y < 0 || player.y > canvas.height) endGame();
+
+        if(frame % 90 === 0) {
+            let gap = 180, gateY = Math.random() * (canvas.height - gap - 100) + 50;
+            obstacles.push({x: canvas.width, y: 0, w: 50, h: gateY, p: false});
+            obstacles.push({x: canvas.width, y: gateY + gap, w: 50, h: canvas.height, p: false});
+        }
+
+        obstacles.forEach((o, i) => {
+            o.x -= (5 + score * 0.1);
+            if(player.x < o.x + o.w && player.x + player.size > o.x && player.y < o.y + o.h && player.y + player.size > o.y) endGame();
+            if(!o.p && o.x < player.x) { o.p = true; score++; }
+            if(o.x < -100) obstacles.splice(i, 1);
+        });
+    }
+
+    function draw() {
+        ctx.save();
+        if(shake > 0) { ctx.translate(Math.random()*10-5, Math.random()*10-5); shake--; }
+        
+        ctx.fillStyle = '#050510'; ctx.fillRect(0,0,canvas.width, canvas.height);
+        
+        ctx.fillStyle = 'white';
+        stars.forEach(s => ctx.fillRect(s.x, s.y, s.s, s.s));
+
+        if(gameStarted || gameOver) {
+            ctx.fillStyle = varColor('--neon');
+            ctx.save();
+            ctx.translate(player.x+14, player.y+14);
+            ctx.rotate(player.angle);
+            ctx.fillRect(-14, -14, 28, 28);
+            ctx.restore();
+
+            obstacles.forEach(o => {
+                ctx.strokeStyle = varColor('--pink');
+                ctx.lineWidth = 3;
+                ctx.strokeRect(o.x, o.y, o.w, o.h);
+            });
+            
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.font = 'bold 80px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(score, canvas.width/2, canvas.height/2);
+        }
+        ctx.restore();
+        update();
+        requestAnimationFrame(draw);
+    }
+
+    function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name); }
+    window.addEventListener('pointerdown', () => { if(gameStarted) player.vy = player.jump; });
+    
     document.getElementById('val-best').innerText = highScore;
-
-    function startGame(modo) {
-        showMenu('none'); // Esconde menús para jugar
-        // Aquí se activaría tu lógica de salto y obstáculos...
-        console.log("Iniciando modo: " + modo);
-        // Para este ejemplo, simulamos que mueres a los 3 segundos
-        setTimeout(() => {
-            showMenu('menu-death');
-        }, 3000);
-    }
-
-    // Dibujamos un fondo simple para que no se vea negro
-    function animate() {
-        ctx.fillStyle = '#050510';
-        ctx.fillRect(0,0,canvas.width, canvas.height);
-        requestAnimationFrame(animate);
-    }
-    animate();
-
+    setLanguage('es');
+    draw();
 </script>
 </body>
 </html>

@@ -17,11 +17,12 @@ const config = {
     width: window.innerWidth,
     height: window.innerHeight,
     backgroundColor: '#050505',
-    physics: { default: 'arcade', arcade: { gravity: { y: 1000 }, debug: false } },
+    physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } }, // Empezamos sin gravedad
     scene: { preload: preload, create: create, update: update }
 };
 
 let player, obstacles, score = 0, scoreText, isGameOver = false, gameStarted = false;
+let gravityValue = 1200;
 const game = new Phaser.Game(config);
 
 function preload() {}
@@ -30,28 +31,30 @@ function create() {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    // Jugador
     player = this.add.rectangle(w * 0.2, h / 2, 35, 35, 0x00ffff);
     this.physics.add.existing(player);
     player.body.setCollideWorldBounds(true);
-    player.body.setAllowGravity(false); // No cae hasta que empecemos
-
+    
     obstacles = this.physics.add.group();
 
-    // Texto de inicio
     let startText = this.add.text(w/2, h/2, 'TAP TO START', { fontSize: '32px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
 
-    // INPUT PRINCIPAL
     this.input.on('pointerdown', () => {
         if (!gameStarted) {
             gameStarted = true;
             startText.destroy();
-            player.body.setAllowGravity(true);
-            // Iniciar generación de obstáculos
+            player.body.setGravityY(gravityValue); // Activamos gravedad al empezar
             this.time.addEvent({ delay: 1300, callback: addObstacle, callbackScope: this, loop: true });
-        } else if (!isGameOver) {
-            // Cambiar gravedad
-            player.body.setGravityY(player.body.gravity.y * -1);
+        }
+        
+        if (!isGameOver) {
+            // EL TRUCO: Invertimos gravedad Y damos un pequeño impulso
+            let currentGravity = player.body.gravity.y;
+            player.body.setGravityY(currentGravity * -1);
+            
+            // Impulso inmediato para despegarse del suelo/techo
+            player.body.setVelocityY(currentGravity > 0 ? -400 : 400);
+            
             player.setFillStyle(player.body.gravity.y > 0 ? 0x00ffff : 0xff00ff);
         }
     });
@@ -60,19 +63,19 @@ function create() {
 }
 
 function addObstacle() {
-    if (isGameOver) return;
+    if (isGameOver || !gameStarted) return;
     const w = window.innerWidth;
     const h = window.innerHeight;
     
     const isTop = Math.random() > 0.5;
-    const obsHeight = h * 0.3; // Obstáculos proporcionales a la pantalla
+    const obsHeight = h * 0.4; // Un poco más grandes para que sea un reto
     const py = isTop ? 0 : h - obsHeight;
     
-    let obs = this.add.rectangle(w + 50, py + (obsHeight/2), 50, obsHeight, 0xffffff, 0.1);
+    let obs = this.add.rectangle(w + 100, py + (obsHeight/2), 60, obsHeight, 0xffffff, 0.1);
     obs.setStrokeStyle(3, 0xffffff);
     this.physics.add.existing(obs);
     obs.body.setAllowGravity(false);
-    obs.body.setVelocityX(-350 - (score * 8));
+    obs.body.setVelocityX(-400 - (score * 10)); // Velocidad base más rápida
     obstacles.add(obs);
 }
 
@@ -81,13 +84,12 @@ function update() {
     
     this.physics.add.overlap(player, obstacles, () => {
         isGameOver = true;
-        player.setFillStyle(0xff0000);
         this.cameras.main.shake(250, 0.04);
         setTimeout(() => { location.reload(); }, 600);
     });
 
     obstacles.children.iterate(child => {
-        if (child && child.x < -60) {
+        if (child && child.x < -100) {
             child.destroy();
             score++;
             scoreText.setText(score);

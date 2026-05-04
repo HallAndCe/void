@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - DEEP SPACE</title>
+    <title>VOID - HARDCORE</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; transition: filter 0.5s ease; }
@@ -12,13 +12,13 @@
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             text-align: center; color: white; display: none; width: 85%; z-index: 10;
         }
-        #ui-overlay img { max-width: 140px; margin-bottom: 15px; border-radius: 20px; box-shadow: 0 0 20px rgba(255,0,255,0.3); }
+        #ui-overlay img { max-width: 140px; margin-bottom: 15px; border-radius: 20px; }
     </style>
 </head>
 <body>
     <canvas id="game"></canvas>
     <div id="ui-overlay">
-        <img id="logo" src="logo.jpg" alt="Logo"> <!-- Cambiado a .jpg -->
+        <img id="logo" src="logo.jpg" alt="Logo">
         <h1 id="final-score">SCORE: 0</h1>
         <p id="high-score">BEST: 0</p>
         <p style="color: #aaa; margin-top: 20px;" id="instruction-retry">Tap to try again</p>
@@ -27,8 +27,8 @@
 <script>
     const lang = navigator.language.startsWith('es') ? 'es' : 'en';
     const texts = {
-        es: { start: 'TOCA PARA EMPEZAR', score: 'PUNTOS', best: 'RÉCORD', retry: 'Toca para reintentar' },
-        en: { start: 'TAP TO START', score: 'SCORE', best: 'BEST', retry: 'Tap to try again' }
+        es: { start: 'TOCA PARA SALTAR', score: 'PUNTOS', best: 'RÉCORD', retry: 'Toca para reintentar' },
+        en: { start: 'TAP TO JUMP', score: 'SCORE', best: 'BEST', retry: 'Tap to try again' }
     };
 
     const canvas = document.getElementById('game');
@@ -42,27 +42,22 @@
     let highScore = localStorage.getItem('voidHighScore') || 0;
     let gameStarted = false;
     let gameOver = false;
-    let gameSpeed = 5.5;
+    let gameSpeed = 5;
     let trail = [];
-    let stars = []; // Partículas de fondo
+    let stars = [];
 
-    // Crear estrellas iniciales
+    // Estrellas de fondo
     for(let i = 0; i < 50; i++) {
-        stars.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2,
-            speed: Math.random() * 0.5 + 0.2
-        });
+        stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 0.5 + 0.2 });
     }
 
     const player = {
         x: canvas.width * 0.2,
         y: canvas.height / 2,
-        size: 32,
+        size: 30,
         vy: 0,
-        speed: 7.5,
-        color: '#00ffff',
+        gravity: 0.6, // Fuerza de caída
+        jump: -10,    // Fuerza de salto
         angle: 0
     };
 
@@ -70,22 +65,26 @@
     let frame = 0;
 
     function spawnObstacle() {
-        const h = Math.random() * (canvas.height * 0.35) + (canvas.height * 0.2);
-        const isTop = Math.random() > 0.5;
-        obstacles.push({
-            x: canvas.width + 100,
-            y: isTop ? 0 : canvas.height - h,
-            w: 65,
-            h: h,
-            color: '#111',
-            edge: isTop ? '#ff00ff' : '#00ffff'
-        });
+        const type = Math.random();
+        const w = 65;
+        
+        if (type < 0.6) {
+            // Obstáculo clásico (Arriba o Abajo)
+            const h = Math.random() * (canvas.height * 0.4) + (canvas.height * 0.2);
+            const isTop = Math.random() > 0.5;
+            obstacles.push({ x: canvas.width + 100, y: isTop ? 0 : canvas.height - h, w: w, h: h, edge: isTop ? '#ff00ff' : '#00ffff' });
+        } else {
+            // NUEVO: Obstáculo Central (Flotante)
+            const h = 180;
+            const y = Math.random() * (canvas.height - h - 200) + 100;
+            obstacles.push({ x: canvas.width + 100, y: y, w: w, h: h, edge: '#ffff00' }); // Amarillo neón para peligro central
+        }
     }
 
     function resetGame() {
-        score = 0; gameSpeed = 5.5; obstacles = []; trail = []; frame = 0;
+        score = 0; gameSpeed = 5; obstacles = []; trail = []; frame = 0;
         gameOver = false; gameStarted = false;
-        player.y = canvas.height / 2; player.vy = 0; player.angle = 0;
+        player.y = canvas.height / 2; player.vy = 0;
         ui.style.display = 'none';
         canvas.classList.remove('blurred');
     }
@@ -93,24 +92,23 @@
     function update() {
         if (!gameStarted || gameOver) return;
         frame++;
+        
+        // FÍSICA FLAPPY
+        player.vy += player.gravity;
         player.y += player.vy;
-        player.angle += 0.15;
+        player.angle = Math.min(Math.PI/4, Math.max(-Math.PI/4, player.vy * 0.05)); // Inclina el cubo según cae/sube
 
-        // Estrellas (movimiento lento)
-        stars.forEach(s => {
-            s.x -= s.speed;
-            if(s.x < 0) s.x = canvas.width;
-        });
+        stars.forEach(s => { s.x -= s.speed; if(s.x < 0) s.x = canvas.width; });
 
-        trail.push({ x: player.x, y: player.y, color: player.color, angle: player.angle });
-        if (trail.length > 15) trail.shift();
+        trail.push({ x: player.x, y: player.y, angle: player.angle });
+        if (trail.length > 12) trail.shift();
 
         if (player.y < 0 || player.y + player.size > canvas.height) endGame();
 
-        if (frame % Math.max(35, Math.floor(75 - score * 0.4)) === 0) spawnObstacle();
+        if (frame % Math.max(40, Math.floor(90 - score * 0.5)) === 0) spawnObstacle();
 
         obstacles.forEach((obs, index) => {
-            obs.x -= (gameSpeed + score * 0.18);
+            obs.x -= (gameSpeed + score * 0.15);
             if (player.x < obs.x + obs.w && player.x + player.size > obs.x &&
                 player.y < obs.y + obs.h && player.y + player.size > obs.y) endGame();
             if (obs.x + obs.w < 0) { obstacles.splice(index, 1); score++; }
@@ -127,27 +125,17 @@
     }
 
     function draw() {
-        // Fondo con degradado radial suave
         let grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 5, canvas.width/2, canvas.height/2, canvas.width);
-        grd.addColorStop(0, "#0a0a1a"); // Azul muy oscuro al centro
-        grd.addColorStop(1, "#000000"); // Negro a los bordes
+        grd.addColorStop(0, "#0a0a1a"); grd.addColorStop(1, "#000000");
         ctx.fillStyle = grd;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Dibujar estrellas
         ctx.fillStyle = "#fff";
-        stars.forEach(s => {
-            ctx.globalAlpha = 0.3;
-            ctx.beginPath();
-            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
+        stars.forEach(s => { ctx.globalAlpha = 0.3; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill(); });
         ctx.globalAlpha = 1.0;
 
-        // Score fondo
         ctx.fillStyle = 'rgba(255,255,255,0.03)';
-        ctx.font = 'bold 200px sans-serif';
-        ctx.textAlign = 'center';
+        ctx.font = 'bold 200px sans-serif'; ctx.textAlign = 'center';
         ctx.fillText(score, canvas.width/2, canvas.height/2 + 70);
 
         // Estela
@@ -155,8 +143,8 @@
             ctx.save();
             ctx.translate(t.x + player.size/2, t.y + player.size/2);
             ctx.rotate(t.angle);
-            ctx.globalAlpha = i / trail.length * 0.4;
-            ctx.strokeStyle = t.color;
+            ctx.globalAlpha = i / trail.length * 0.3;
+            ctx.strokeStyle = '#00ffff';
             ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
             ctx.restore();
         });
@@ -166,9 +154,8 @@
         ctx.save();
         ctx.translate(player.x + player.size/2, player.y + player.size/2);
         ctx.rotate(player.angle);
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = player.color;
-        ctx.fillStyle = player.color;
+        ctx.shadowBlur = 20; ctx.shadowColor = '#00ffff';
+        ctx.fillStyle = '#00ffff';
         ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
         ctx.fillStyle = '#fff';
         ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
@@ -177,7 +164,7 @@
 
         // Obstáculos
         obstacles.forEach(obs => {
-            ctx.fillStyle = obs.color;
+            ctx.fillStyle = '#111';
             ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
             ctx.strokeStyle = obs.edge;
             ctx.lineWidth = 3;
@@ -195,8 +182,10 @@
 
     window.addEventListener('pointerdown', () => {
         if (gameOver) resetGame();
-        else if (!gameStarted) { gameStarted = true; player.vy = player.speed; }
-        else { player.vy *= -1; player.color = player.vy > 0 ? '#00ffff' : '#ff00ff'; }
+        else {
+            gameStarted = true;
+            player.vy = player.jump; // Salto hacia arriba
+        }
     });
 
     draw();

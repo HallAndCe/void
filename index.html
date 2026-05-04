@@ -3,71 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID FINAL</title>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <style>body { margin: 0; background: #000; overflow: hidden; }</style>
+    <title>VOID - Native</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; touch-action: none; }
+        canvas { display: block; background: #050505; }
+    </style>
 </head>
 <body>
+    <canvas id="game"></canvas>
 <script>
-const config = {
-    type: Phaser.AUTO,
-    width: 800,
-    height: 600,
-    physics: { default: 'arcade' },
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    scene: { create: create, update: update }
-};
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
 
-let player, obstacles, score = 0, scoreText, gameStarted = false, nextObstacle = 0;
-const game = new Phaser.Game(config);
+    // Ajuste de pantalla
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-function create() {
-    player = this.add.rectangle(150, 300, 40, 40, 0x00ffff);
-    this.physics.add.existing(player);
-    player.body.setCollideWorldBounds(true);
-    obstacles = this.physics.add.group();
-    scoreText = this.add.text(400, 100, '0', { fontSize: '100px', fill: '#fff' }).setOrigin(0.5).setAlpha(0.2);
-    this.add.text(400, 300, 'TAP TO PLAY', { fontSize: '40px', fill: '#fff' }).setOrigin(0.5).setName('t');
-    
-    this.input.on('pointerdown', () => {
-        if (!gameStarted) {
-            gameStarted = true;
-            this.children.getByName('t').destroy();
-            player.body.setVelocityY(400);
-        } else {
-            player.body.setVelocityY(player.body.velocity.y * -1);
-            player.setFillStyle(player.body.velocity.y > 0 ? 0x00ffff : 0xff00ff);
-        }
-    });
-}
+    let score = 0;
+    let gameStarted = false;
+    let gameOver = false;
 
-function update(time) {
-    if (!gameStarted) return;
+    const player = {
+        x: canvas.width * 0.2,
+        y: canvas.height / 2,
+        size: 30,
+        vy: 0,
+        speed: 7,
+        color: '#00ffff'
+    };
 
-    // SISTEMA MANUAL: Si el tiempo actual supera al marcador, soltamos bloque
-    if (time > nextObstacle) {
+    let obstacles = [];
+    let frame = 0;
+
+    function spawnObstacle() {
+        const h = canvas.height * 0.4;
         const isTop = Math.random() > 0.5;
-        let obs = this.add.rectangle(850, isTop ? 100 : 500, 60, 250, 0xffffff);
-        this.physics.add.existing(obs);
-        obs.body.setVelocityX(-450);
-        obstacles.add(obs);
-        nextObstacle = time + 1500; // Siguiente en 1.5 segundos
+        obstacles.push({
+            x: canvas.width + 50,
+            y: isTop ? 0 : canvas.height - h,
+            w: 50,
+            h: h
+        });
     }
 
-    // Colisiones
-    this.physics.add.overlap(player, obstacles, () => {
-        location.reload();
-    });
+    function update() {
+        if (!gameStarted || gameOver) return;
 
-    // Puntuación
-    obstacles.children.iterate(child => {
-        if (child && child.x < -50) {
-            child.destroy();
-            score++;
-            scoreText.setText(score);
+        frame++;
+        player.y += player.vy;
+
+        // Limites pantalla
+        if (player.y < 0) player.y = 0;
+        if (player.y + player.size > canvas.height) player.y = canvas.height - player.size;
+
+        // Obstáculos
+        if (frame % 80 === 0) spawnObstacle();
+
+        obstacles.forEach((obs, index) => {
+            obs.x -= 5;
+
+            // Colisión
+            if (player.x < obs.x + obs.w &&
+                player.x + player.size > obs.x &&
+                player.y < obs.y + obs.h &&
+                player.y + player.size > obs.y) {
+                gameOver = true;
+                setTimeout(() => location.reload(), 1000);
+            }
+
+            // Puntos
+            if (obs.x + obs.w < 0) {
+                obstacles.splice(index, 1);
+                score++;
+            }
+        });
+    }
+
+    function draw() {
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Score fondo
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.font = 'bold 120px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(score, canvas.width/2, canvas.height/2 + 40);
+
+        // Jugador
+        ctx.fillStyle = player.color;
+        ctx.fillRect(player.x, player.y, player.size, player.size);
+
+        // Obstáculos
+        ctx.fillStyle = '#ffffff';
+        obstacles.forEach(obs => {
+            ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        });
+
+        if (!gameStarted) {
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px sans-serif';
+            ctx.fillText('TAP TO START', canvas.width/2, canvas.height/2 + 150);
+        }
+
+        update();
+        requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('pointerdown', () => {
+        if (!gameStarted) {
+            gameStarted = true;
+            player.vy = player.speed;
+        } else {
+            player.vy *= -1;
+            player.color = player.vy > 0 ? '#00ffff' : '#ff00ff';
         }
     });
-}
+
+    draw();
 </script>
 </body>
 </html>

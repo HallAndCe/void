@@ -3,84 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - MOBILE ADAPTED</title>
+    <title>VOID - PRO</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
-        canvas { display: block; transition: filter 0.5s ease; }
-        .blurred { filter: blur(10px) brightness(0.3); }
-        #ui-overlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; color: white; display: none; width: 85%; z-index: 10;
+        canvas { display: block; transition: filter 0.3s ease; }
+        
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; pointer-events: none; z-index: 10;
         }
-        #ui-overlay img { max-width: 140px; margin-bottom: 15px; border-radius: 20px; }
+        
+        .menu-box {
+            text-align: center; background: rgba(0,0,0,0.7); padding: 30px;
+            border-radius: 20px; border: 1px solid #333; backdrop-filter: blur(5px);
+            display: none; pointer-events: auto; width: 80%; max-width: 300px;
+        }
+
+        #logo { max-width: 120px; border-radius: 15px; margin-bottom: 10px; border: 2px solid #00ffff; }
+        h1 { margin: 0; font-size: 40px; letter-spacing: 5px; color: #fff; text-shadow: 0 0 10px #00ffff; }
+        .btn-start { margin-top: 20px; padding: 12px 25px; background: #00ffff; color: #000; border: none; border-radius: 5px; font-weight: bold; text-transform: uppercase; cursor: pointer; }
     </style>
 </head>
 <body>
     <canvas id="game"></canvas>
-    <div id="ui-overlay">
-        <img id="logo" src="logo.jpg" alt="Logo">
-        <h1 id="final-score">SCORE: 0</h1>
-        <p id="high-score">BEST: 0</p>
-        <p style="color: #aaa; margin-top: 20px;" id="instruction-retry">Tap to try again</p>
+    
+    <div id="ui-layer">
+        <!-- Menú Principal e Inicio -->
+        <div id="main-menu" class="menu-box" style="display: block;">
+            <img src="logo.jpg" id="logo" alt="Logo">
+            <h1>VOID</h1>
+            <p id="high-score-main">BEST: 0</p>
+            <button class="btn-start" onclick="startGame()">START</button>
+        </div>
+
+        <!-- Pantalla de Muerte -->
+        <div id="death-screen" class="menu-box">
+            <h2 id="final-score">SCORE: 0</h2>
+            <p id="high-score-death">BEST: 0</p>
+            <p id="unlock-msg" style="font-size: 12px; color: #00ffff;"></p>
+            <button class="btn-start" onclick="startGame()">RETRY</button>
+        </div>
     </div>
 
 <script>
-    const lang = navigator.language.startsWith('es') ? 'es' : 'en';
-    const texts = {
-        es: { start: 'TOCA PARA SALTAR', score: 'PUNTOS', best: 'RÉCORD', retry: 'Toca para reintentar' },
-        en: { start: 'TAP TO JUMP', score: 'SCORE', best: 'BEST', retry: 'Tap to try again' }
-    };
-
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
-    const ui = document.getElementById('ui-overlay');
+    const menu = document.getElementById('main-menu');
+    const deathScreen = document.getElementById('death-screen');
 
-    // AJUSTE DINÁMICO DE PANTALLA
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     window.addEventListener('resize', resize);
     resize();
 
     let score = 0;
     let highScore = localStorage.getItem('voidHighScore') || 0;
+    document.getElementById('high-score-main').innerText = "BEST: " + highScore;
+
     let gameStarted = false;
     let gameOver = false;
-    
-    // VELOCIDAD ADAPTATIVA: En móvil (ancho pequeño) la base es más lenta
-    const getBaseSpeed = () => canvas.width < 500 ? canvas.width * 0.008 : 5.5;
-    let gameSpeed = getBaseSpeed();
-    
-    let trail = [];
-    let stars = [];
-    for(let i = 0; i < 40; i++) {
-        stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 0.4 + 0.1 });
+    let frame = 0;
+    let gameSpeed = 0;
+    let shakeTimer = 0;
+
+    let player, obstacles, trail, stars, particles;
+
+    function init() {
+        player = { x: canvas.width * 0.2, y: canvas.height / 2, size: canvas.width < 500 ? 26 : 30, vy: 0, gravity: 0.6, jump: -11, angle: 0 };
+        obstacles = [];
+        trail = [];
+        particles = [];
+        stars = [];
+        for(let i = 0; i < 40; i++) stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 0.4 + 0.1 });
+        gameSpeed = canvas.width < 500 ? canvas.width * 0.008 : 5.5;
     }
 
-    const player = {
-        x: canvas.width * 0.2,
-        y: canvas.height / 2,
-        size: canvas.width < 500 ? 25 : 30, // Cubo un pelín más pequeño en móvil
-        vy: 0,
-        gravity: 0.6, 
-        jump: -11,
-        angle: 0
-    };
+    function startGame() {
+        init();
+        score = 0;
+        frame = 0;
+        gameStarted = true;
+        gameOver = false;
+        menu.style.display = 'none';
+        deathScreen.style.display = 'none';
+        canvas.style.filter = 'none';
+    }
 
-    let obstacles = [];
-    let frame = 0;
+    function createExplosion(x, y) {
+        for(let i = 0; i < 15; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                size: Math.random() * 8,
+                life: 1.0,
+                color: Math.random() > 0.5 ? '#00ffff' : '#ff00ff'
+            });
+        }
+    }
+
+    function endGame() {
+        if (gameOver) return;
+        gameOver = true;
+        shakeTimer = 15; // Activa sacudida
+        createExplosion(player.x, player.y);
+        
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('voidHighScore', highScore);
+        }
+
+        setTimeout(() => {
+            document.getElementById('final-score').innerText = "SCORE: " + score;
+            document.getElementById('high-score-death').innerText = "BEST: " + highScore;
+            
+            // Mensajes de desbloqueo
+            let msg = "";
+            if (highScore < 20) msg = "NEXT SKIN AT 20";
+            else if (highScore < 50) msg = "ELECTRIC SKIN ACTIVE!";
+            else msg = "GOD SKIN ACTIVE!";
+            document.getElementById('unlock-msg').innerText = msg;
+
+            deathScreen.style.display = 'block';
+            canvas.style.filter = 'blur(10px) brightness(0.4)';
+        }, 800);
+    }
 
     function spawnObstacle() {
         const type = Math.random();
         const w = canvas.width < 500 ? 50 : 65;
-        const gap = canvas.width < 500 ? 170 : 195; // Hueco un pelín más generoso en móvil
+        const gap = canvas.width < 500 ? 175 : 195;
         const obsColor = Math.random() > 0.5 ? '#ff00ff' : '#00ffff';
         
         if (type < 0.45) {
-            const minGateY = 80;
-            const maxGateY = canvas.height - gap - 80;
-            const gateY = Math.random() * (maxGateY - minGateY) + minGateY;
+            const gateY = Math.random() * (canvas.height - gap - 160) + 80;
             obstacles.push({ x: canvas.width + 100, y: 0, w: w, h: gateY, edge: obsColor });
             obstacles.push({ x: canvas.width + 100, y: gateY + gap, w: w, h: canvas.height - (gateY + gap), edge: obsColor });
         } else {
@@ -90,16 +146,16 @@
         }
     }
 
-    function resetGame() {
-        score = 0; gameSpeed = getBaseSpeed(); obstacles = []; trail = []; frame = 0;
-        gameOver = false; gameStarted = false;
-        player.y = canvas.height / 2; player.vy = 0;
-        ui.style.display = 'none';
-        canvas.classList.remove('blurred');
-    }
-
     function update() {
-        if (!gameStarted || gameOver) return;
+        if (!gameStarted || gameOver) {
+            // Animación de partículas incluso en game over
+            particles.forEach((p, i) => {
+                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+                if(p.life <= 0) particles.splice(i, 1);
+            });
+            return;
+        };
+
         frame++;
         player.vy += player.gravity;
         player.y += player.vy;
@@ -108,22 +164,19 @@
         stars.forEach(s => { s.x -= s.speed; if(s.x < 0) s.x = canvas.width; });
 
         trail.push({ x: player.x, y: player.y, angle: player.angle });
-        if (trail.length > 10) trail.shift();
+        // Longitud de estela según skin (Highscore)
+        let trailMax = highScore > 50 ? 25 : 12;
+        if (trail.length > trailMax) trail.shift();
 
         if (player.y < 0 || player.y + player.size > canvas.height) endGame();
 
-        // FRECUENCIA ADAPTATIVA: Menos frecuencia en pantallas estrechas
-        const spawnRate = canvas.width < 500 ? 100 : 85;
-        if (frame % Math.max(35, Math.floor(spawnRate - score * 0.6)) === 0) spawnObstacle();
+        let spawnRate = canvas.width < 500 ? 95 : 80;
+        if (frame % Math.max(30, Math.floor(spawnRate - score * 0.7)) === 0) spawnObstacle();
 
         obstacles.forEach((obs, index) => {
-            // VELOCIDAD QUE ESCALA CON LOS PUNTOS
-            const currentSpeed = gameSpeed + (score * (canvas.width < 500 ? 0.15 : 0.22));
-            obs.x -= currentSpeed;
-
+            obs.x -= (gameSpeed + score * 0.22);
             if (player.x < obs.x + obs.w && player.x + player.size > obs.x &&
                 player.y < obs.y + obs.h && player.y + player.size > obs.y) endGame();
-            
             if (!obs.passed && obs.x + obs.w < player.x) {
                 obs.passed = true;
                 if (index === 0 || obstacles[index-1].x !== obs.x) score++;
@@ -132,53 +185,78 @@
         });
     }
 
-    function endGame() {
-        gameOver = true;
-        if (score > highScore) { highScore = score; localStorage.setItem('voidHighScore', highScore); }
-        document.getElementById('final-score').innerText = `${texts[lang].score}: ${score}`;
-        document.getElementById('high-score').innerText = `${texts[lang].best}: ${highScore}`;
-        ui.style.display = 'block';
-        canvas.classList.add('blurred');
-    }
-
     function draw() {
+        ctx.save();
+        // Efecto Screen Shake
+        if (shakeTimer > 0) {
+            ctx.translate(Math.random()*8 - 4, Math.random()*8 - 4);
+            shakeTimer--;
+        }
+
         let grdBg = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 5, canvas.width/2, canvas.height/2, canvas.width);
-        grdBg.addColorStop(0, "#0a0a1a"); grdBg.addColorStop(1, "#000000");
+        grdBg.addColorStop(0, "#0a0a1a"); grdBg.addColorStop(1, "#000");
         ctx.fillStyle = grdBg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Estrellas
         ctx.fillStyle = "#fff";
         stars.forEach(s => { ctx.globalAlpha = 0.2; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill(); });
         ctx.globalAlpha = 1.0;
 
+        // Score fondo
         ctx.fillStyle = 'rgba(255,255,255,0.03)';
-        ctx.font = `bold ${canvas.width < 500 ? '120px' : '200px'} sans-serif`; 
+        ctx.font = `bold ${canvas.width < 500 ? '120px' : '200px'} sans-serif`;
         ctx.textAlign = 'center';
         ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
 
-        const drawPlayerBody = (x, y, size, angle, isTrail) => {
-            ctx.save();
-            ctx.translate(x + size/2, y + size/2);
-            ctx.rotate(angle);
-            let pGrd = ctx.createLinearGradient(-size/2, -size/2, size/2, size/2);
-            pGrd.addColorStop(0, '#00ffff');
-            pGrd.addColorStop(1, '#ff00ff');
-            if (!isTrail) { ctx.shadowBlur = 15; ctx.shadowColor = '#00ffff'; }
-            ctx.fillStyle = pGrd;
-            ctx.fillRect(-size/2, -size/2, size, size);
-            if (!isTrail) { ctx.fillStyle = '#fff'; ctx.fillRect(-size/4, -size/4, size/2, size/2); }
-            ctx.restore();
-        };
-
+        // Estela
         trail.forEach((t, i) => {
+            ctx.save(); ctx.translate(t.x + player.size/2, t.y + player.size/2); ctx.rotate(t.angle);
             ctx.globalAlpha = i / trail.length * 0.3;
-            drawPlayerBody(t.x, t.y, player.size, t.angle, true);
+            let pGrd = ctx.createLinearGradient(-player.size/2, -player.size/2, player.size/2, player.size/2);
+            pGrd.addColorStop(0, '#00ffff'); pGrd.addColorStop(1, '#ff00ff');
+            ctx.fillStyle = pGrd;
+            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.restore();
         });
         ctx.globalAlpha = 1.0;
 
-        drawPlayerBody(player.x, player.y, player.size, player.angle, false);
-        ctx.shadowBlur = 0;
+        // Jugador (si no ha muerto)
+        if (!gameOver) {
+            ctx.save();
+            ctx.translate(player.x + player.size/2, player.y + player.size/2);
+            ctx.rotate(player.angle);
+            let pGrd = ctx.createLinearGradient(-player.size/2, -player.size/2, player.size/2, player.size/2);
+            pGrd.addColorStop(0, '#00ffff'); pGrd.addColorStop(1, '#ff00ff');
+            
+            // Efecto Skin Electric (+20 pts)
+            if(highScore >= 20) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#fff';
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
+            } else {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00ffff';
+            }
+            
+            ctx.fillStyle = pGrd;
+            ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
+            ctx.restore();
+        }
 
+        // Partículas de explosión
+        particles.forEach(p => {
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+        });
+        ctx.globalAlpha = 1.0;
+
+        // Obstáculos
         obstacles.forEach(obs => {
             ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
@@ -191,20 +269,16 @@
             ctx.globalAlpha = 1.0;
         });
 
-        if (!gameStarted && !gameOver) {
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif';
-            ctx.fillText(texts[lang].start, canvas.width/2, canvas.height/2 + 150);
-        }
-
+        ctx.restore();
         update();
         requestAnimationFrame(draw);
     }
 
-    window.addEventListener('pointerdown', () => {
-        if (gameOver) resetGame();
-        else { gameStarted = true; player.vy = player.jump; }
+    window.addEventListener('pointerdown', (e) => {
+        if (gameStarted && !gameOver) player.vy = player.jump;
     });
 
+    init();
     draw();
 </script>
 </body>

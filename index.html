@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID</title>
+    <title>VOID DEBUG</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
-        body { margin: 0; background: #000; touch-action: none; overflow: hidden; }
+        body { margin: 0; background: #111; touch-action: none; overflow: hidden; }
         canvas { display: block; }
     </style>
 </head>
@@ -14,14 +14,10 @@
 <script>
 const config = {
     type: Phaser.AUTO,
-    width: 800, // Usamos un ancho fijo interno
-    height: 600, // Usamos un alto fijo interno
+    width: 800,
+    height: 600,
     backgroundColor: '#000000',
-    parent: 'game-container',
-    scale: {
-        mode: Phaser.Scale.FIT, // Esto ajusta el juego al móvil automáticamente
-        autoCenter: Phaser.Scale.CENTER_BOTH
-    },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
     scene: { preload: preload, create: create, update: update }
 };
@@ -32,14 +28,14 @@ const game = new Phaser.Game(config);
 function preload() {}
 
 function create() {
-    // El jugador se dibuja en coordenadas fijas
     player = this.add.rectangle(150, 300, 40, 40, 0x00ffff);
     this.physics.add.existing(player);
     player.body.setCollideWorldBounds(true);
     
     obstacles = this.physics.add.group();
 
-    let startText = this.add.text(400, 300, 'TOUCH TO START', { fontSize: '40px', fill: '#00ffff' }).setOrigin(0.5);
+    // Texto de inicio
+    let startText = this.add.text(400, 300, 'CLICK TO TEST', { fontSize: '40px', fill: '#ff0000' }).setOrigin(0.5);
 
     this.input.on('pointerdown', () => {
         if (!gameStarted) {
@@ -47,20 +43,13 @@ function create() {
             startText.destroy();
             player.body.setVelocityY(400);
             
-            // Generador de obstáculos manual
+            // LANZAR EL PRIMER OBSTÁCULO AL INSTANTE
+            spawnObstacle.call(this);
+            
+            // Lógica de repetición
             this.time.addEvent({ 
                 delay: 1500, 
-                callback: () => {
-                    if (isGameOver) return;
-                    const isTop = Math.random() > 0.5;
-                    const py = isTop ? 0 : 400; // Posición fija arriba o abajo
-                    
-                    // Creamos el bloque en el borde derecho fijo (800)
-                    let obs = this.add.rectangle(850, py + 100, 60, 200, 0xffffff);
-                    this.physics.add.existing(obs);
-                    obs.body.setVelocityX(-400);
-                    obstacles.add(obs);
-                }, 
+                callback: spawnObstacle, 
                 callbackScope: this, 
                 loop: true 
             });
@@ -70,7 +59,20 @@ function create() {
         }
     });
 
-    scoreText = this.add.text(400, 100, '0', { fontSize: '100px', fill: '#fff' }).setOrigin(0.5).setAlpha(0.2);
+    scoreText = this.add.text(400, 100, '0', { fontSize: '80px', fill: '#fff' }).setOrigin(0.5).setAlpha(0.5);
+}
+
+function spawnObstacle() {
+    if (isGameOver) return;
+    
+    // Crear un bloque ROJO gigante para que sea imposible no verlo
+    const yPos = Math.random() > 0.5 ? 0 : 400;
+    let obs = this.add.rectangle(900, yPos + 100, 80, 300, 0xff0000); // ROJO
+    this.physics.add.existing(obs);
+    obs.body.setVelocityX(-300); // Más lento para que de tiempo a verlo
+    obstacles.add(obs);
+    
+    console.log("Obstáculo creado en X: 900, Y: " + yPos); // Esto lo veremos en la consola del PC
 }
 
 function update() {
@@ -78,8 +80,8 @@ function update() {
 
     this.physics.add.overlap(player, obstacles, () => {
         isGameOver = true;
-        this.cameras.main.shake(200);
-        setTimeout(() => { location.reload(); }, 500);
+        this.cameras.main.shake(500, 0.05);
+        setTimeout(() => { location.reload(); }, 1000);
     });
 
     obstacles.children.iterate(child => {

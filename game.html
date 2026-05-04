@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VOID - Gravity Runner</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style> body { margin: 0; overflow: hidden; background: #050505; } </style>
+</head>
+<body>
+<script>
+const config = {
+    type: Phaser.AUTO,
+    width: window.innerWidth,
+    height: window.innerHeight,
+    physics: { default: 'arcade', arcade: { gravity: { y: 900 } } },
+    scene: { preload: preload, create: create, update: update }
+};
+
+let player, obstacles, score = 0, scoreText, isGameOver = false, stars;
+const game = new Phaser.Game(config);
+
+function preload() {}
+
+function create() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    // Fondo de estrellas tipo "Void"
+    stars = this.add.graphics();
+    stars.fillStyle(0xffffff, 0.5);
+    for(let i=0; i<100; i++) {
+        stars.fillCircle(Math.random()*w, Math.random()*h, 1);
+    }
+
+    // Jugador estilo neón
+    player = this.add.rectangle(w * 0.2, h / 2, 30, 30, 0x00ffff);
+    this.physics.add.existing(player);
+    player.body.setCollideWorldBounds(true);
+    
+    // Partículas (Estela)
+    const particles = this.add.particles(0, 0, 'rect', {
+        scale: { start: 0.6, end: 0 },
+        alpha: { start: 0.5, end: 0 },
+        frequency: 50,
+        follow: player
+    });
+
+    obstacles = this.physics.add.group();
+
+    this.input.on('pointerdown', () => {
+        if(isGameOver) return;
+        player.body.setGravityY(player.body.gravity.y * -1);
+        player.setFillStyle(player.body.gravity.y > 0 ? 0x00ffff : 0xff00ff);
+    });
+
+    this.time.addEvent({ delay: 1200, callback: addObstacle, callbackScope: this, loop: true });
+
+    scoreText = this.add.text(w/2, 50, '0', { fontSize: '64px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+}
+
+function addObstacle() {
+    if (isGameOver) return;
+    const h = window.innerHeight;
+    const isTop = Math.random() > 0.5;
+    const obsHeight = 150 + Math.random() * 100;
+    const py = isTop ? 0 : h - obsHeight;
+    
+    let obs = this.add.rectangle(window.innerWidth + 50, py + (obsHeight/2), 40, obsHeight, 0xffffff, 0.2);
+    obs.setStrokeStyle(2, 0xffffff);
+    this.physics.add.existing(obs);
+    obs.body.setAllowGravity(false);
+    obs.body.setVelocityX(-400 - (score * 5));
+    obstacles.add(obs);
+}
+
+function update() {
+    if (isGameOver) return;
+    
+    this.physics.add.overlap(player, obstacles, () => {
+        isGameOver = true;
+        this.cameras.main.shake(200, 0.05);
+        setTimeout(() => { location.reload(); }, 500);
+    });
+
+    obstacles.children.iterate(child => {
+        if (child && child.x < -50) {
+            child.destroy();
+            score++;
+            scoreText.setText(score);
+        }
+    });
+}
+</script>
+</body>
+</html>

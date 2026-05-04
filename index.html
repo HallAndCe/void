@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - NEON</title>
+    <title>VOID - DEEP SPACE</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; transition: filter 0.5s ease; }
@@ -12,13 +12,13 @@
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             text-align: center; color: white; display: none; width: 85%; z-index: 10;
         }
-        #ui-overlay img { max-width: 140px; margin-bottom: 15px; border-radius: 20px; }
+        #ui-overlay img { max-width: 140px; margin-bottom: 15px; border-radius: 20px; box-shadow: 0 0 20px rgba(255,0,255,0.3); }
     </style>
 </head>
 <body>
     <canvas id="game"></canvas>
     <div id="ui-overlay">
-        <img id="logo" src="logo.png" alt="Logo">
+        <img id="logo" src="logo.jpg" alt="Logo"> <!-- Cambiado a .jpg -->
         <h1 id="final-score">SCORE: 0</h1>
         <p id="high-score">BEST: 0</p>
         <p style="color: #aaa; margin-top: 20px;" id="instruction-retry">Tap to try again</p>
@@ -43,7 +43,18 @@
     let gameStarted = false;
     let gameOver = false;
     let gameSpeed = 5.5;
-    let trail = []; // Array para la estela
+    let trail = [];
+    let stars = []; // Partículas de fondo
+
+    // Crear estrellas iniciales
+    for(let i = 0; i < 50; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2,
+            speed: Math.random() * 0.5 + 0.2
+        });
+    }
 
     const player = {
         x: canvas.width * 0.2,
@@ -52,14 +63,14 @@
         vy: 0,
         speed: 7.5,
         color: '#00ffff',
-        angle: 0 // Para la rotación
+        angle: 0
     };
 
     let obstacles = [];
     let frame = 0;
 
     function spawnObstacle() {
-        const h = Math.random() * (canvas.height * 0.3) + (canvas.height * 0.2);
+        const h = Math.random() * (canvas.height * 0.35) + (canvas.height * 0.2);
         const isTop = Math.random() > 0.5;
         obstacles.push({
             x: canvas.width + 100,
@@ -83,13 +94,18 @@
         if (!gameStarted || gameOver) return;
         frame++;
         player.y += player.vy;
-        player.angle += 0.15; // Rotación constante
+        player.angle += 0.15;
 
-        // Guardar posición para la estela
-        trail.push({ x: player.x, y: player.y, alpha: 1.0, color: player.color, angle: player.angle });
-        if (trail.length > 15) trail.shift(); // Longitud de la estela
+        // Estrellas (movimiento lento)
+        stars.forEach(s => {
+            s.x -= s.speed;
+            if(s.x < 0) s.x = canvas.width;
+        });
 
-        if (player.y < 0 || player.y + player.size > canvas.height) gameOver = true, endGame();
+        trail.push({ x: player.x, y: player.y, color: player.color, angle: player.angle });
+        if (trail.length > 15) trail.shift();
+
+        if (player.y < 0 || player.y + player.size > canvas.height) endGame();
 
         if (frame % Math.max(35, Math.floor(75 - score * 0.4)) === 0) spawnObstacle();
 
@@ -111,41 +127,49 @@
     }
 
     function draw() {
-        ctx.fillStyle = '#050505';
+        // Fondo con degradado radial suave
+        let grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 5, canvas.width/2, canvas.height/2, canvas.width);
+        grd.addColorStop(0, "#0a0a1a"); // Azul muy oscuro al centro
+        grd.addColorStop(1, "#000000"); // Negro a los bordes
+        ctx.fillStyle = grd;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Score de fondo
+        // Dibujar estrellas
+        ctx.fillStyle = "#fff";
+        stars.forEach(s => {
+            ctx.globalAlpha = 0.3;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1.0;
+
+        // Score fondo
         ctx.fillStyle = 'rgba(255,255,255,0.03)';
         ctx.font = 'bold 200px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(score, canvas.width/2, canvas.height/2 + 70);
 
-        // DIBUJAR ESTELA (TRAIL)
+        // Estela
         trail.forEach((t, i) => {
             ctx.save();
             ctx.translate(t.x + player.size/2, t.y + player.size/2);
             ctx.rotate(t.angle);
-            ctx.globalAlpha = i / trail.length * 0.5; // Se desvanece
+            ctx.globalAlpha = i / trail.length * 0.4;
             ctx.strokeStyle = t.color;
-            ctx.lineWidth = 2;
             ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
             ctx.restore();
         });
+        ctx.globalAlpha = 1.0;
 
-        // DIBUJAR JUGADOR (NÚCLEO NEÓN)
+        // Jugador
         ctx.save();
         ctx.translate(player.x + player.size/2, player.y + player.size/2);
         ctx.rotate(player.angle);
-        
-        // Brillo exterior
         ctx.shadowBlur = 20;
         ctx.shadowColor = player.color;
-        
-        // Relleno principal
         ctx.fillStyle = player.color;
         ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
-        
-        // Núcleo blanco interno para efecto "guay"
         ctx.fillStyle = '#fff';
         ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
         ctx.restore();

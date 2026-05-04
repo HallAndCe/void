@@ -3,22 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - Legacy Essence</title>
+    <title>VOID - PlayStore Edition</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
         body { margin: 0; background: #050510; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
+        
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
-        .menu-box { text-align: center; background: rgba(0,0,0,0.9); padding: 25px; border-radius: 20px; border: 2px solid #333; backdrop-filter: blur(10px); display: none; pointer-events: auto; width: 80%; max-width: 300px; }
-        h1 { font-size: 45px; letter-spacing: 10px; margin: 10px 0; text-shadow: 0 0 15px var(--neon); color: var(--neon); }
-        .btn { width: 100%; margin: 10px 0; padding: 15px; background: #111; color: white; border: 1px solid #444; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn-main { border: 2px solid var(--pink); }
+        
+        /* Banner de publicidad simulado */
+        #ad-banner { 
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 50px; 
+            background: #111; border-top: 1px solid #333; display: flex; 
+            align-items: center; justify-content: center; font-size: 10px; color: #444; z-index: 100;
+        }
+
+        .menu-box { text-align: center; background: rgba(0,0,0,0.92); padding: 30px; border-radius: 25px; border: 2px solid #333; backdrop-filter: blur(15px); display: none; pointer-events: auto; width: 85%; max-width: 320px; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+        
+        h1 { font-size: 50px; letter-spacing: 12px; margin: 0 0 20px 0; text-shadow: 0 0 20px var(--neon); color: var(--neon); }
+        
+        .btn { width: 100%; margin: 12px 0; padding: 18px; background: #111; color: white; border: 1px solid #444; border-radius: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; transition: 0.3s; }
+        .btn-main { border: 2px solid var(--pink); box-shadow: 0 0 15px rgba(255,0,255,0.2); }
+        .btn-disabled { opacity: 0.4; font-size: 10px; cursor: default; }
+        
         .lang-selector { position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 20; }
-        .lang-btn { background: rgba(255,255,255,0.1); border: 1px solid #444; color: white; padding: 5px 10px; border-radius: 5px; margin-left: 5px; cursor: pointer; }
-        .lang-active { border-color: var(--neon); color: var(--neon); }
+        .lang-btn { background: rgba(255,255,255,0.05); border: 1px solid #444; color: #888; padding: 6px 12px; border-radius: 8px; margin-left: 5px; cursor: pointer; font-size: 12px; }
+        .lang-active { border-color: var(--neon); color: var(--neon); background: rgba(0,255,255,0.1); }
+        
+        .best-score { color: #888; margin-bottom: 20px; font-size: 14px; letter-spacing: 2px; }
     </style>
 </head>
 <body>
+
+    <div id="ad-banner">ADVERTISEMENT - GOOGLE ADMOB PLACEHOLDER</div>
 
     <div class="lang-selector">
         <button id="l-es" class="lang-btn lang-active" onclick="setLanguage('es')">ESP</button>
@@ -28,21 +45,37 @@
     <canvas id="game"></canvas>
 
     <div id="ui-layer">
+        <!-- MENU PRINCIPAL -->
         <div id="menu-main" class="menu-box" style="display: block;">
             <h1>VOID</h1>
-            <p>BEST: <span id="val-best">0</span></p>
-            <button class="btn btn-main" onclick="showMenu('menu-play')">JUGAR</button>
+            <div class="best-score">BEST: <span id="val-best">0</span></div>
+            <button class="btn btn-main" onclick="showMenu('menu-play')">START</button>
+            <button class="btn" onclick="showMenu('menu-opts')">OPTIONS</button>
+            <button class="btn btn-disabled">STORE (COMING SOON)</button>
         </div>
+
+        <!-- MODO DE JUEGO -->
         <div id="menu-play" class="menu-box">
-            <h2 style="color:var(--neon)">MODOS</h2>
-            <button class="btn btn-main" onclick="startGame()">INFINITO</button>
-            <button class="btn" onclick="showMenu('menu-main')">VOLVER</button>
+            <h2 style="color:var(--neon); margin-bottom:20px;">MODES</h2>
+            <button class="btn btn-main" onclick="startGame()">INFINITE MODE</button>
+            <button class="btn btn-disabled">LEVELS (COMING SOON)</button>
+            <button class="btn" onclick="showMenu('menu-main')" style="border-color:#555; color:#888;">BACK</button>
         </div>
+
+        <!-- OPCIONES -->
+        <div id="menu-opts" class="menu-box">
+            <h2 style="color:var(--neon); margin-bottom:20px;">OPTIONS</h2>
+            <button class="btn" onclick="alert('Sound: ON')">SOUND: ON</button>
+            <button class="btn" onclick="alert('Haptic: ON')">VIBRATION: ON</button>
+            <button class="btn" onclick="showMenu('menu-main')">BACK</button>
+        </div>
+
+        <!-- MUERTE -->
         <div id="menu-death" class="menu-box">
-            <h2 style="color:var(--pink)">GAME OVER</h2>
-            <p>SCORE: <span id="val-score">0</span></p>
-            <button class="btn btn-main" onclick="startGame()">REINTENTAR</button>
-            <button class="btn" onclick="showMenu('menu-main')">MENÚ</button>
+            <h2 style="color:var(--pink)">VOIDED</h2>
+            <p style="font-size:24px; margin: 10px 0;">SCORE: <span id="val-score">0</span></p>
+            <button class="btn btn-main" onclick="startGame()">RETRY</button>
+            <button class="btn" onclick="showMenu('menu-main')">MENU</button>
         </div>
     </div>
 
@@ -51,6 +84,7 @@
     const ctx = canvas.getContext('2d');
     
     let gameActive = false, score = 0, frame = 0, angle = 0;
+    let baseSpeed = 4; // Velocidad inicial
     let player, obstacles = [], stars = [], trail = [];
     let highScore = localStorage.getItem('void_best') || 0;
 
@@ -70,28 +104,28 @@
     }
 
     function startGame() {
-        player = { x: canvas.width * 0.15, y: canvas.height/2, size: 25, vy: 0, gravity: 0.5, jump: -8 };
-        obstacles = []; trail = []; score = 0; frame = 0; angle = 0;
+        player = { x: canvas.width * 0.15, y: canvas.height/2, size: 26, vy: 0, gravity: 0.55, jump: -8.5 };
+        obstacles = []; trail = []; score = 0; frame = 0; angle = 0; baseSpeed = 4;
         showMenu('none');
     }
 
     function createObstacle() {
         const type = Math.floor(Math.random() * 4);
-        const w = 60, gap = 180;
+        const w = 65, gap = 175;
         
         switch(type) {
-            case 0: // ARRIBA
-                obstacles.push({ x: canvas.width, y: 0, w: w, h: Math.random()*200 + 100, p: false });
+            case 0: // TOP
+                obstacles.push({ x: canvas.width, y: 0, w: w, h: Math.random()*250 + 80, p: false });
                 break;
-            case 1: // ABAJO
-                let h = Math.random()*200 + 100;
+            case 1: // BOTTOM
+                let h = Math.random()*250 + 80;
                 obstacles.push({ x: canvas.width, y: canvas.height - h, w: w, h: h, p: false });
                 break;
-            case 2: // CENTRO (BLOQUE FLOTANTE)
-                obstacles.push({ x: canvas.width, y: canvas.height/2 - 50, w: w, h: 100, p: false });
+            case 2: // MIDDLE
+                obstacles.push({ x: canvas.width, y: canvas.height/2 - 60, w: w, h: 120, p: false });
                 break;
-            case 3: // PUERTAS (DOBLE)
-                let wallH = Math.random() * (canvas.height - gap - 100) + 50;
+            case 3: // DOORS
+                let wallH = Math.random() * (canvas.height - gap - 120) + 60;
                 obstacles.push({ x: canvas.width, y: 0, w: w, h: wallH, p: false });
                 obstacles.push({ x: canvas.width, y: wallH + gap, w: w, h: canvas.height, p: false });
                 break;
@@ -99,65 +133,75 @@
     }
 
     function loop() {
+        // Fondo
         ctx.fillStyle = '#050510';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         stars.forEach(s => {
-            ctx.fillStyle = "white";
+            ctx.fillStyle = "rgba(255,255,255,0.5)";
             ctx.fillRect(s.x, s.y, s.s, s.s);
-            if(gameActive) s.x -= s.v;
+            if(gameActive) s.x -= s.v * (baseSpeed/4);
             if(s.x < 0) s.x = canvas.width;
         });
 
         if (gameActive || document.getElementById('menu-death').style.display === 'block') {
             if(gameActive) {
                 frame++;
-                angle += 0.1; // Rotación constante
+                angle += 0.12; 
                 trail.push({x: player.x, y: player.y, a: angle});
-                if(trail.length > 15) trail.shift();
-                if(frame % 100 === 0) createObstacle();
+                if(trail.length > 18) trail.shift();
+                
+                // Generar obstáculos según velocidad
+                let spawnRate = Math.max(60, 100 - (score * 2));
+                if(frame % Math.floor(spawnRate) === 0) createObstacle();
             }
 
-            // DIBUJAR ESTELA
+            // Estela Pro
             trail.forEach((t, i) => {
                 ctx.save();
-                ctx.translate(t.x + 12.5, t.y + 12.5);
+                ctx.translate(t.x + 13, t.y + 13);
                 ctx.rotate(t.a);
-                ctx.fillStyle = `rgba(0, 255, 255, ${i/30})`;
-                ctx.fillRect(-12.5, -12.5, 25, 25);
+                ctx.fillStyle = `rgba(0, 255, 255, ${i/40})`;
+                ctx.fillRect(-13, -13, 26, 26);
                 ctx.restore();
             });
 
-            // JUGADOR PRO
+            // Player Pro
             ctx.save();
-            ctx.translate(player.x + 12.5, player.y + 12.5);
+            ctx.translate(player.x + 13, player.y + 13);
             ctx.rotate(angle);
-            ctx.shadowBlur = 15; ctx.shadowColor = "#00ffff";
-            ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 2;
-            ctx.strokeRect(-12.5, -12.5, 25, 25);
+            ctx.shadowBlur = 20; ctx.shadowColor = "#00ffff";
+            ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 3;
+            ctx.strokeRect(-13, -13, 26, 26);
             ctx.fillStyle = "white";
             ctx.fillRect(-6, -6, 12, 12);
             ctx.restore();
 
-            // OBSTÁCULOS
+            // Obstáculos Pro
             obstacles.forEach((o, i) => {
-                if(gameActive) o.x -= (4 + score * 0.1);
-                ctx.shadowBlur = 10; ctx.shadowColor = "#ff00ff";
-                ctx.fillStyle = "rgba(255, 0, 255, 0.2)";
+                if(gameActive) o.x -= baseSpeed;
+                ctx.shadowBlur = 15; ctx.shadowColor = "#ff00ff";
+                ctx.fillStyle = "rgba(255, 0, 255, 0.1)";
                 ctx.strokeStyle = "#ff00ff";
-                ctx.strokeRect(o.x, o.y, o.w, o.h);
+                ctx.lineWidth = 2;
                 ctx.fillRect(o.x, o.y, o.w, o.h);
+                ctx.strokeRect(o.x, o.y, o.w, o.h);
                 
-                if (gameActive && player.x < o.x + o.w && player.x + 25 > o.x && player.y < o.y + o.h && player.y + 25 > o.y) endGame();
-                if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; }
+                if (gameActive && player.x + 2 < o.x + o.w && player.x + 24 > o.x && player.y + 2 < o.y + o.h && player.y + 24 > o.y) endGame();
+                
+                if (gameActive && !o.p && o.x < player.x) { 
+                    o.p = true; 
+                    score++; 
+                    baseSpeed += 0.15; // <--- INCREMENTO DE VELOCIDAD PROGRESIVA
+                }
             });
-            if(obstacles.length > 15) obstacles.splice(0,1);
+            if(obstacles.length > 20) obstacles.splice(0,1);
             
             ctx.shadowBlur = 0;
             ctx.fillStyle = "rgba(255,255,255,0.1)";
-            ctx.font = "bold 80px sans-serif";
+            ctx.font = "bold 100px sans-serif";
             ctx.textAlign = "center";
-            ctx.fillText(score, canvas.width/2, canvas.height/2);
+            ctx.fillText(score, canvas.width/2, canvas.height/2 + 40);
         }
 
         if(gameActive) {
@@ -177,6 +221,7 @@
     }
 
     window.addEventListener('pointerdown', () => { if(gameActive) player.vy = player.jump; });
+    document.getElementById('val-best').innerText = highScore;
     loop();
 </script>
 </body>

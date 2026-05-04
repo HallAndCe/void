@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VOID - Gravity Runner</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-    <style> body { margin: 0; overflow: hidden; background: #050505; } </style>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; touch-action: none; }
+        canvas { display: block; }
+    </style>
 </head>
 <body>
 <script>
@@ -13,11 +16,12 @@ const config = {
     type: Phaser.AUTO,
     width: window.innerWidth,
     height: window.innerHeight,
-    physics: { default: 'arcade', arcade: { gravity: { y: 900 } } },
+    backgroundColor: '#050505',
+    physics: { default: 'arcade', arcade: { gravity: { y: 1000 }, debug: false } },
     scene: { preload: preload, create: create, update: update }
 };
 
-let player, obstacles, score = 0, scoreText, isGameOver = false, stars;
+let player, obstacles, score = 0, scoreText, isGameOver = false, gameStarted = false;
 const game = new Phaser.Game(config);
 
 function preload() {}
@@ -26,65 +30,64 @@ function create() {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    // Fondo de estrellas tipo "Void"
-    stars = this.add.graphics();
-    stars.fillStyle(0xffffff, 0.5);
-    for(let i=0; i<100; i++) {
-        stars.fillCircle(Math.random()*w, Math.random()*h, 1);
-    }
-
-    // Jugador estilo neón
-    player = this.add.rectangle(w * 0.2, h / 2, 30, 30, 0x00ffff);
+    // Jugador
+    player = this.add.rectangle(w * 0.2, h / 2, 35, 35, 0x00ffff);
     this.physics.add.existing(player);
     player.body.setCollideWorldBounds(true);
-    
-    // Partículas (Estela)
-    const particles = this.add.particles(0, 0, 'rect', {
-        scale: { start: 0.6, end: 0 },
-        alpha: { start: 0.5, end: 0 },
-        frequency: 50,
-        follow: player
-    });
+    player.body.setAllowGravity(false); // No cae hasta que empecemos
 
     obstacles = this.physics.add.group();
 
+    // Texto de inicio
+    let startText = this.add.text(w/2, h/2, 'TAP TO START', { fontSize: '32px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+
+    // INPUT PRINCIPAL
     this.input.on('pointerdown', () => {
-        if(isGameOver) return;
-        player.body.setGravityY(player.body.gravity.y * -1);
-        player.setFillStyle(player.body.gravity.y > 0 ? 0x00ffff : 0xff00ff);
+        if (!gameStarted) {
+            gameStarted = true;
+            startText.destroy();
+            player.body.setAllowGravity(true);
+            // Iniciar generación de obstáculos
+            this.time.addEvent({ delay: 1300, callback: addObstacle, callbackScope: this, loop: true });
+        } else if (!isGameOver) {
+            // Cambiar gravedad
+            player.body.setGravityY(player.body.gravity.y * -1);
+            player.setFillStyle(player.body.gravity.y > 0 ? 0x00ffff : 0xff00ff);
+        }
     });
 
-    this.time.addEvent({ delay: 1200, callback: addObstacle, callbackScope: this, loop: true });
-
-    scoreText = this.add.text(w/2, 50, '0', { fontSize: '64px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+    scoreText = this.add.text(w/2, 80, '0', { fontSize: '80px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setAlpha(0.2);
 }
 
 function addObstacle() {
     if (isGameOver) return;
+    const w = window.innerWidth;
     const h = window.innerHeight;
+    
     const isTop = Math.random() > 0.5;
-    const obsHeight = 150 + Math.random() * 100;
+    const obsHeight = h * 0.3; // Obstáculos proporcionales a la pantalla
     const py = isTop ? 0 : h - obsHeight;
     
-    let obs = this.add.rectangle(window.innerWidth + 50, py + (obsHeight/2), 40, obsHeight, 0xffffff, 0.2);
-    obs.setStrokeStyle(2, 0xffffff);
+    let obs = this.add.rectangle(w + 50, py + (obsHeight/2), 50, obsHeight, 0xffffff, 0.1);
+    obs.setStrokeStyle(3, 0xffffff);
     this.physics.add.existing(obs);
     obs.body.setAllowGravity(false);
-    obs.body.setVelocityX(-400 - (score * 5));
+    obs.body.setVelocityX(-350 - (score * 8));
     obstacles.add(obs);
 }
 
 function update() {
-    if (isGameOver) return;
+    if (!gameStarted || isGameOver) return;
     
     this.physics.add.overlap(player, obstacles, () => {
         isGameOver = true;
-        this.cameras.main.shake(200, 0.05);
-        setTimeout(() => { location.reload(); }, 500);
+        player.setFillStyle(0xff0000);
+        this.cameras.main.shake(250, 0.04);
+        setTimeout(() => { location.reload(); }, 600);
     });
 
     obstacles.children.iterate(child => {
-        if (child && child.x < -50) {
+        if (child && child.x < -60) {
             child.destroy();
             score++;
             scoreText.setText(score);

@@ -79,24 +79,18 @@
     </div>
 
 <script>
-    const canvas = document.getElementById('game');
+const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     
-    // --- DICCIONARIO DE IDIOMAS ---
     const langData = {
-        es: { 
-            best: "RÉCORD", start: "INICIAR", opts: "OPCIONES", store: "TIENDA (PRONTO)", 
-            modes: "MODOS", inf: "MODO INFINITO", levels: "NIVELES (PRONTO)", back: "VOLVER",
-            sound: "SONIDO: ON", vib: "VIBRACIÓN: ON", over: "VOIDED", score: "PUNTOS", 
-            retry: "REINTENTAR", menu: "MENÚ" 
-        },
-        en: { 
-            best: "BEST", start: "START", opts: "OPTIONS", store: "STORE (COMING SOON)", 
-            modes: "MODES", inf: "INFINITE MODE", levels: "LEVELS (COMING SOON)", back: "BACK",
-            sound: "SOUND: ON", vib: "VIBRATION: ON", over: "VOIDED", score: "SCORE", 
-            retry: "RETRY", menu: "MENU" 
-        }
+        es: { best: "RÉCORD", start: "INICIAR", opts: "OPCIONES", store: "TIENDA (PRONTO)", modes: "MODOS", inf: "MODO INFINITO", levels: "NIVELES (PRONTO)", back: "VOLVER", sound: "SONIDO: ON", vib: "VIBRACIÓN: ON", over: "VOIDED", score: "PUNTOS", retry: "REINTENTAR", menu: "MENÚ" },
+        en: { best: "BEST", start: "START", opts: "OPTIONS", store: "STORE (COMING SOON)", modes: "MODES", inf: "INFINITE mode", levels: "LEVELS (COMING SOON)", back: "BACK", sound: "SOUND: ON", vib: "VIBRATION: ON", over: "VOIDED", score: "SCORE", retry: "RETRY", menu: "MENU" }
     };
+
+    let gameActive = false, score = 0, frame = 0, angle = 0;
+    let baseSpeed = 4, hue = 180; 
+    let player, obstacles = [], stars = [], trail = [], particles = [];
+    let highScore = localStorage.getItem('void_best') || 0;
 
     function setLanguage(l) {
         const t = langData[l];
@@ -116,15 +110,9 @@
         document.getElementById('t-score').innerText = t.score;
         document.getElementById('b-retry').innerText = t.retry;
         document.getElementById('b-menu').innerText = t.menu;
-
         document.getElementById('l-es').className = l === 'es' ? 'lang-btn lang-active' : 'lang-btn';
         document.getElementById('l-en').className = l === 'en' ? 'lang-btn lang-active' : 'lang-btn';
     }
-
-    let gameActive = false, score = 0, frame = 0, angle = 0;
-    let baseSpeed = 4;
-    let player, obstacles = [], stars = [], trail = [];
-    let highScore = localStorage.getItem('void_best') || 0;
 
     function resize() {
         canvas.width = window.innerWidth;
@@ -143,13 +131,26 @@
 
     function startGame() {
         player = { x: canvas.width * 0.15, y: canvas.height/2, size: 26, vy: 0, gravity: 0.55, jump: -8.5 };
-        obstacles = []; trail = []; score = 0; frame = 0; angle = 0; baseSpeed = 4;
+        obstacles = []; trail = []; particles = []; score = 0; frame = 0; angle = 0; baseSpeed = 4; hue = 180;
         showMenu('none');
+    }
+
+    function createExplosion(x, y, color) {
+        for(let i=0; i<20; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                size: Math.random() * 5 + 2,
+                life: 1,
+                color: color
+            });
+        }
     }
 
     function createObstacle() {
         const type = Math.floor(Math.random() * 4);
-        const w = 65, gap = 175;
+        const w = 65, gap = Math.max(140, 180 - score);
         switch(type) {
             case 0: obstacles.push({ x: canvas.width, y: 0, w: w, h: Math.random()*250 + 80, p: false }); break;
             case 1: let h = Math.random()*250 + 80; obstacles.push({ x: canvas.width, y: canvas.height - h, w: w, h: h, p: false }); break;
@@ -161,54 +162,72 @@
     }
 
     function loop() {
-        ctx.fillStyle = '#050510';
+        // Efecto visual de progresión: el fondo cambia sutilmente de color según score
+        ctx.fillStyle = `hsla(${hue}, 30%, 5%, 1)`;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         stars.forEach(s => {
-            ctx.fillStyle = "rgba(255,255,255,0.5)";
+            ctx.fillStyle = "white";
             ctx.fillRect(s.x, s.y, s.s, s.s);
             if(gameActive) s.x -= s.v * (baseSpeed/4);
             if(s.x < 0) s.x = canvas.width;
+        });
+
+        // Dibujar Partículas
+        particles.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy; p.life -= 0.02;
+            ctx.fillStyle = p.color.replace('1)', `${p.life})`);
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+            if(p.life <= 0) particles.splice(i, 1);
         });
 
         if (gameActive || document.getElementById('menu-death').style.display === 'block') {
             if(gameActive) {
                 frame++;
                 angle += 0.12; 
+                hue = 180 + (score * 5); // Cambia el color ambiente
                 trail.push({x: player.x, y: player.y, a: angle});
                 if(trail.length > 18) trail.shift();
-                let spawnRate = Math.max(60, 100 - (score * 2));
+                let spawnRate = Math.max(50, 100 - (score * 2));
                 if(frame % Math.floor(spawnRate) === 0) createObstacle();
             }
 
+            // Estela
             trail.forEach((t, i) => {
                 ctx.save();
                 ctx.translate(t.x + 13, t.y + 13);
                 ctx.rotate(t.a);
-                ctx.fillStyle = `rgba(0, 255, 255, ${i/40})`;
+                ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${i/40})`;
                 ctx.fillRect(-13, -13, 26, 26);
                 ctx.restore();
             });
 
-            ctx.save();
-            ctx.translate(player.x + 13, player.y + 13);
-            ctx.rotate(angle);
-            ctx.shadowBlur = 20; ctx.shadowColor = "#00ffff";
-            ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 3;
-            ctx.strokeRect(-13, -13, 26, 26);
-            ctx.fillStyle = "white";
-            ctx.fillRect(-6, -6, 12, 12);
-            ctx.restore();
+            // Player
+            if(gameActive) {
+                ctx.save();
+                ctx.translate(player.x + 13, player.y + 13);
+                ctx.rotate(angle);
+                ctx.shadowBlur = 20; ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`; ctx.lineWidth = 3;
+                ctx.strokeRect(-13, -13, 26, 26);
+                ctx.fillStyle = "white";
+                ctx.fillRect(-6, -6, 12, 12);
+                ctx.restore();
+            }
 
+            // Obstáculos
             obstacles.forEach((o, i) => {
                 if(gameActive) o.x -= baseSpeed;
                 ctx.shadowBlur = 15; ctx.shadowColor = "#ff00ff";
                 ctx.fillStyle = "rgba(255, 0, 255, 0.1)";
                 ctx.strokeStyle = "#ff00ff";
-                ctx.lineWidth = 2;
-                ctx.fillRect(o.x, o.y, o.w, o.h);
                 ctx.strokeRect(o.x, o.y, o.w, o.h);
-                if (gameActive && player.x + 2 < o.x + o.w && player.x + 24 > o.x && player.y + 2 < o.y + o.h && player.y + 24 > o.y) endGame();
+                ctx.fillRect(o.x, o.y, o.w, o.h);
+                
+                if (gameActive && player.x + 2 < o.x + o.w && player.x + 24 > o.x && player.y + 2 < o.y + o.h && player.y + 24 > o.y) {
+                    createExplosion(player.x + 13, player.y + 13, `rgba(0, 255, 255, 1)`);
+                    endGame();
+                }
                 if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; baseSpeed += 0.15; }
             });
             if(obstacles.length > 20) obstacles.splice(0,1);
@@ -223,7 +242,10 @@
         if(gameActive) {
             player.vy += player.gravity;
             player.y += player.vy;
-            if (player.y > canvas.height || player.y < 0) endGame();
+            if (player.y > canvas.height || player.y < 0) {
+                createExplosion(player.x + 13, player.y + 13, `rgba(0, 255, 255, 1)`);
+                endGame();
+            }
         }
         requestAnimationFrame(loop);
     }
@@ -238,7 +260,7 @@
 
     window.addEventListener('pointerdown', () => { if(gameActive) player.vy = player.jump; });
     document.getElementById('val-best').innerText = highScore;
-    setLanguage('es'); // Forzamos idioma inicial
+    setLanguage('es');
     loop();
 </script>
 </body>

@@ -11,7 +11,6 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
         
-        /* Banner de publicidad simulado */
         #ad-banner { 
             position: absolute; bottom: 0; left: 0; width: 100%; height: 50px; 
             background: #111; border-top: 1px solid #333; display: flex; 
@@ -48,34 +47,34 @@
         <!-- MENU PRINCIPAL -->
         <div id="menu-main" class="menu-box" style="display: block;">
             <h1>VOID</h1>
-            <div class="best-score">BEST: <span id="val-best">0</span></div>
-            <button class="btn btn-main" onclick="showMenu('menu-play')">START</button>
-            <button class="btn" onclick="showMenu('menu-opts')">OPTIONS</button>
-            <button class="btn btn-disabled">STORE (COMING SOON)</button>
+            <div class="best-score"><span id="t-best">RÉCORD</span>: <span id="val-best">0</span></div>
+            <button class="btn btn-main" id="b-start" onclick="showMenu('menu-play')">INICIAR</button>
+            <button class="btn" id="b-opts" onclick="showMenu('menu-opts')">OPCIONES</button>
+            <button class="btn btn-disabled" id="b-store">TIENDA (PRÓXIMAMENTE)</button>
         </div>
 
         <!-- MODO DE JUEGO -->
         <div id="menu-play" class="menu-box">
-            <h2 style="color:var(--neon); margin-bottom:20px;">MODES</h2>
-            <button class="btn btn-main" onclick="startGame()">INFINITE MODE</button>
-            <button class="btn btn-disabled">LEVELS (COMING SOON)</button>
-            <button class="btn" onclick="showMenu('menu-main')" style="border-color:#555; color:#888;">BACK</button>
+            <h2 id="t-modes" style="color:var(--neon); margin-bottom:20px;">MODOS</h2>
+            <button class="btn btn-main" id="b-inf" onclick="startGame()">MODO INFINITO</button>
+            <button class="btn btn-disabled" id="b-levels">NIVELES (PRÓXIMAMENTE)</button>
+            <button class="btn" id="b-back" onclick="showMenu('menu-main')" style="border-color:#555; color:#888;">VOLVER</button>
         </div>
 
         <!-- OPCIONES -->
         <div id="menu-opts" class="menu-box">
-            <h2 style="color:var(--neon); margin-bottom:20px;">OPTIONS</h2>
-            <button class="btn" onclick="alert('Sound: ON')">SOUND: ON</button>
-            <button class="btn" onclick="alert('Haptic: ON')">VIBRATION: ON</button>
-            <button class="btn" onclick="showMenu('menu-main')">BACK</button>
+            <h2 id="t-opts-title" style="color:var(--neon); margin-bottom:20px;">OPCIONES</h2>
+            <button class="btn" id="b-sound" onclick="alert('Sound: ON')">SONIDO: ON</button>
+            <button class="btn" id="b-vib" onclick="alert('Vibration: ON')">VIBRACIÓN: ON</button>
+            <button class="btn" id="b-back2" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
 
         <!-- MUERTE -->
         <div id="menu-death" class="menu-box">
-            <h2 style="color:var(--pink)">VOIDED</h2>
-            <p style="font-size:24px; margin: 10px 0;">SCORE: <span id="val-score">0</span></p>
-            <button class="btn btn-main" onclick="startGame()">RETRY</button>
-            <button class="btn" onclick="showMenu('menu-main')">MENU</button>
+            <h2 id="t-over" style="color:var(--pink)">VOIDED</h2>
+            <p style="font-size:24px; margin: 10px 0;"><span id="t-score">PUNTOS</span>: <span id="val-score">0</span></p>
+            <button class="btn btn-main" id="b-retry" onclick="startGame()">REINTENTAR</button>
+            <button class="btn" id="b-menu" onclick="showMenu('menu-main')">MENÚ</button>
         </div>
     </div>
 
@@ -83,8 +82,47 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     
+    // --- DICCIONARIO DE IDIOMAS ---
+    const langData = {
+        es: { 
+            best: "RÉCORD", start: "INICIAR", opts: "OPCIONES", store: "TIENDA (PRONTO)", 
+            modes: "MODOS", inf: "MODO INFINITO", levels: "NIVELES (PRONTO)", back: "VOLVER",
+            sound: "SONIDO: ON", vib: "VIBRACIÓN: ON", over: "VOIDED", score: "PUNTOS", 
+            retry: "REINTENTAR", menu: "MENÚ" 
+        },
+        en: { 
+            best: "BEST", start: "START", opts: "OPTIONS", store: "STORE (COMING SOON)", 
+            modes: "MODES", inf: "INFINITE MODE", levels: "LEVELS (COMING SOON)", back: "BACK",
+            sound: "SOUND: ON", vib: "VIBRATION: ON", over: "VOIDED", score: "SCORE", 
+            retry: "RETRY", menu: "MENU" 
+        }
+    };
+
+    function setLanguage(l) {
+        const t = langData[l];
+        document.getElementById('t-best').innerText = t.best;
+        document.getElementById('b-start').innerText = t.start;
+        document.getElementById('b-opts').innerText = t.opts;
+        document.getElementById('b-store').innerText = t.store;
+        document.getElementById('t-modes').innerText = t.modes;
+        document.getElementById('b-inf').innerText = t.inf;
+        document.getElementById('b-levels').innerText = t.levels;
+        document.getElementById('b-back').innerText = t.back;
+        document.getElementById('b-back2').innerText = t.back;
+        document.getElementById('t-opts-title').innerText = t.opts;
+        document.getElementById('b-sound').innerText = t.sound;
+        document.getElementById('b-vib').innerText = t.vib;
+        document.getElementById('t-over').innerText = t.over;
+        document.getElementById('t-score').innerText = t.score;
+        document.getElementById('b-retry').innerText = t.retry;
+        document.getElementById('b-menu').innerText = t.menu;
+
+        document.getElementById('l-es').className = l === 'es' ? 'lang-btn lang-active' : 'lang-btn';
+        document.getElementById('l-en').className = l === 'en' ? 'lang-btn lang-active' : 'lang-btn';
+    }
+
     let gameActive = false, score = 0, frame = 0, angle = 0;
-    let baseSpeed = 4; // Velocidad inicial
+    let baseSpeed = 4;
     let player, obstacles = [], stars = [], trail = [];
     let highScore = localStorage.getItem('void_best') || 0;
 
@@ -112,28 +150,17 @@
     function createObstacle() {
         const type = Math.floor(Math.random() * 4);
         const w = 65, gap = 175;
-        
         switch(type) {
-            case 0: // TOP
-                obstacles.push({ x: canvas.width, y: 0, w: w, h: Math.random()*250 + 80, p: false });
-                break;
-            case 1: // BOTTOM
-                let h = Math.random()*250 + 80;
-                obstacles.push({ x: canvas.width, y: canvas.height - h, w: w, h: h, p: false });
-                break;
-            case 2: // MIDDLE
-                obstacles.push({ x: canvas.width, y: canvas.height/2 - 60, w: w, h: 120, p: false });
-                break;
-            case 3: // DOORS
-                let wallH = Math.random() * (canvas.height - gap - 120) + 60;
-                obstacles.push({ x: canvas.width, y: 0, w: w, h: wallH, p: false });
-                obstacles.push({ x: canvas.width, y: wallH + gap, w: w, h: canvas.height, p: false });
-                break;
+            case 0: obstacles.push({ x: canvas.width, y: 0, w: w, h: Math.random()*250 + 80, p: false }); break;
+            case 1: let h = Math.random()*250 + 80; obstacles.push({ x: canvas.width, y: canvas.height - h, w: w, h: h, p: false }); break;
+            case 2: obstacles.push({ x: canvas.width, y: canvas.height/2 - 60, w: w, h: 120, p: false }); break;
+            case 3: let wallH = Math.random() * (canvas.height - gap - 120) + 60;
+                    obstacles.push({ x: canvas.width, y: 0, w: w, h: wallH, p: false });
+                    obstacles.push({ x: canvas.width, y: wallH + gap, w: w, h: canvas.height, p: false }); break;
         }
     }
 
     function loop() {
-        // Fondo
         ctx.fillStyle = '#050510';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -150,13 +177,10 @@
                 angle += 0.12; 
                 trail.push({x: player.x, y: player.y, a: angle});
                 if(trail.length > 18) trail.shift();
-                
-                // Generar obstáculos según velocidad
                 let spawnRate = Math.max(60, 100 - (score * 2));
                 if(frame % Math.floor(spawnRate) === 0) createObstacle();
             }
 
-            // Estela Pro
             trail.forEach((t, i) => {
                 ctx.save();
                 ctx.translate(t.x + 13, t.y + 13);
@@ -166,7 +190,6 @@
                 ctx.restore();
             });
 
-            // Player Pro
             ctx.save();
             ctx.translate(player.x + 13, player.y + 13);
             ctx.rotate(angle);
@@ -177,7 +200,6 @@
             ctx.fillRect(-6, -6, 12, 12);
             ctx.restore();
 
-            // Obstáculos Pro
             obstacles.forEach((o, i) => {
                 if(gameActive) o.x -= baseSpeed;
                 ctx.shadowBlur = 15; ctx.shadowColor = "#ff00ff";
@@ -186,14 +208,8 @@
                 ctx.lineWidth = 2;
                 ctx.fillRect(o.x, o.y, o.w, o.h);
                 ctx.strokeRect(o.x, o.y, o.w, o.h);
-                
                 if (gameActive && player.x + 2 < o.x + o.w && player.x + 24 > o.x && player.y + 2 < o.y + o.h && player.y + 24 > o.y) endGame();
-                
-                if (gameActive && !o.p && o.x < player.x) { 
-                    o.p = true; 
-                    score++; 
-                    baseSpeed += 0.15; // <--- INCREMENTO DE VELOCIDAD PROGRESIVA
-                }
+                if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; baseSpeed += 0.15; }
             });
             if(obstacles.length > 20) obstacles.splice(0,1);
             
@@ -222,6 +238,7 @@
 
     window.addEventListener('pointerdown', () => { if(gameActive) player.vy = player.jump; });
     document.getElementById('val-best').innerText = highScore;
+    setLanguage('es'); // Forzamos idioma inicial
     loop();
 </script>
 </body>

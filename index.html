@@ -1,33 +1,42 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - PRO</title>
+    <title>VOID</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
-        canvas { display: block; background: #050505; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
+        canvas { display: block; transition: filter 0.5s ease; }
+        .blurred { filter: blur(8px) brightness(0.4); }
+        
         #ui-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; color: white; display: none; width: 80%;
+            text-align: center; color: white; display: none; width: 85%; z-index: 10;
         }
-        #ui-overlay img { max-width: 150px; margin-bottom: 20px; border-radius: 10px; }
-        #ui-overlay h1 { font-size: 40px; margin: 0; color: #ff00ff; }
-        #ui-overlay p { font-size: 20px; margin: 10px 0; }
+        #ui-overlay img { max-width: 140px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(0,255,255,0.5)); }
+        #ui-overlay h1 { font-size: 45px; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+        #ui-overlay p { font-size: 22px; margin: 8px 0; font-weight: 300; }
+        .retry-text { font-size: 14px !important; color: #aaa; margin-top: 20px !important; text-transform: uppercase; }
     </style>
 </head>
 <body>
     <canvas id="game"></canvas>
     
-    <!-- Pantalla de Muerte -->
     <div id="ui-overlay">
-        <img id="logo" src="logo.jpg" alt="Void Logo">
-        <h1 id="final-score">PUNTOS: 0</h1>
-        <p id="high-score">RÉCORD: 0</p>
-        <p style="font-size: 14px; color: #666;">Toca para reintentar</p>
+        <img id="logo" src="logo.png" alt="Logo">
+        <h1 id="final-score">SCORE: 0</h1>
+        <p id="high-score">BEST: 0</p>
+        <p class="retry-text" id="instruction-retry">Tap to try again</p>
     </div>
 
 <script>
+    // SISTEMA DE IDIOMAS
+    const lang = navigator.language.startsWith('es') ? 'es' : 'en';
+    const texts = {
+        es: { start: 'TOCA PARA EMPEZAR', score: 'PUNTOS', best: 'RÉCORD', retry: 'Toca para reintentar' },
+        en: { start: 'TAP TO START', score: 'SCORE', best: 'BEST', retry: 'Tap to try again' }
+    };
+
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const ui = document.getElementById('ui-overlay');
@@ -39,14 +48,14 @@
     let highScore = localStorage.getItem('voidHighScore') || 0;
     let gameStarted = false;
     let gameOver = false;
-    let gameSpeed = 5;
+    let gameSpeed = 5.5;
 
     const player = {
         x: canvas.width * 0.2,
         y: canvas.height / 2,
-        size: 30,
+        size: 32,
         vy: 0,
-        speed: 7,
+        speed: 7.5,
         color: '#00ffff'
     };
 
@@ -54,23 +63,24 @@
     let frame = 0;
 
     function spawnObstacle() {
-        // Variación de obstáculos: Altura aleatoria entre 20% y 55% de la pantalla
-        const minH = canvas.height * 0.2;
-        const maxH = canvas.height * 0.55;
+        const minH = canvas.height * 0.25;
+        const maxH = canvas.height * 0.50;
         const h = Math.random() * (maxH - minH) + minH;
-        
         const isTop = Math.random() > 0.5;
+        
         obstacles.push({
             x: canvas.width + 100,
             y: isTop ? 0 : canvas.height - h,
-            w: 60,
-            h: h
+            w: 65,
+            h: h,
+            color: '#1a1a1a', // Color oscuro para los bloques
+            edge: isTop ? '#ff00ff' : '#00ffff' // Bordes neón
         });
     }
 
     function resetGame() {
         score = 0;
-        gameSpeed = 5;
+        gameSpeed = 5.5;
         obstacles = [];
         frame = 0;
         gameOver = false;
@@ -78,6 +88,7 @@
         player.y = canvas.height / 2;
         player.vy = 0;
         ui.style.display = 'none';
+        canvas.classList.remove('blurred');
     }
 
     function update() {
@@ -86,16 +97,14 @@
         frame++;
         player.y += player.vy;
 
-        // Limites
-        if (player.y < 0 || player.y + player.size > canvas.height) {
-            endGame();
-        }
+        // Muerte por bordes
+        if (player.y < 0 || player.y + player.size > canvas.height) endGame();
 
-        // Frecuencia de obstáculos según velocidad
-        if (frame % Math.max(30, Math.floor(80 - score * 0.5)) === 0) spawnObstacle();
+        // Generación de obstáculos progresiva
+        if (frame % Math.max(35, Math.floor(75 - score * 0.4)) === 0) spawnObstacle();
 
         obstacles.forEach((obs, index) => {
-            obs.x -= (gameSpeed + score * 0.15); // ACELERACIÓN PROGRESIVA
+            obs.x -= (gameSpeed + score * 0.18);
 
             // Colisión
             if (player.x < obs.x + obs.w &&
@@ -118,48 +127,53 @@
             highScore = score;
             localStorage.setItem('voidHighScore', highScore);
         }
-        document.getElementById('final-score').innerText = "PUNTOS: " + score;
-        document.getElementById('high-score').innerText = "RÉCORD: " + highScore;
+        
+        // Actualizar textos según idioma
+        document.getElementById('final-score').innerText = `${texts[lang].score}: ${score}`;
+        document.getElementById('high-score').innerText = `${texts[lang].best}: ${highScore}`;
+        document.getElementById('instruction-retry').innerText = texts[lang].retry;
+        
         ui.style.display = 'block';
+        canvas.classList.add('blurred');
     }
 
     function draw() {
         ctx.fillStyle = '#050505';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Score de fondo
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
-        ctx.font = 'bold 150px sans-serif';
+        // Puntuación gigante de fondo
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.font = 'bold 180px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
+        ctx.fillText(score, canvas.width/2, canvas.height/2 + 60);
 
-        // Jugador con estela simple (opcional)
-        ctx.fillStyle = player.color;
+        // Jugador
         ctx.shadowBlur = 15;
         ctx.shadowColor = player.color;
+        ctx.fillStyle = player.color;
         ctx.fillRect(player.x, player.y, player.size, player.size);
-        ctx.shadowBlur = 0; // Reset sombra para lo demás
+        ctx.shadowBlur = 0;
 
-        // Obstáculos con borde
+        // Obstáculos
         obstacles.forEach(obs => {
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = obs.color;
             ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-            ctx.strokeStyle = '#ff00ff';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = obs.edge;
+            ctx.lineWidth = 3;
             ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
         });
 
         if (!gameStarted && !gameOver) {
             ctx.fillStyle = '#fff';
-            ctx.font = '20px sans-serif';
-            ctx.fillText('TOCA PARA EMPEZAR', canvas.width/2, canvas.height/2 + 150);
+            ctx.font = 'bold 22px sans-serif';
+            ctx.fillText(texts[lang].start, canvas.width/2, canvas.height/2 + 180);
         }
 
         update();
         requestAnimationFrame(draw);
     }
 
-    window.addEventListener('pointerdown', () => {
+    window.addEventListener('pointerdown', (e) => {
         if (gameOver) {
             resetGame();
         } else if (!gameStarted) {

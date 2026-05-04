@@ -7,16 +7,21 @@
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
     <style>
         body { margin: 0; background: #000; touch-action: none; overflow: hidden; }
-        canvas { display: block; margin: 0 auto; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
 <script>
 const config = {
     type: Phaser.AUTO,
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: 800, // Usamos un ancho fijo interno
+    height: 600, // Usamos un alto fijo interno
     backgroundColor: '#000000',
+    parent: 'game-container',
+    scale: {
+        mode: Phaser.Scale.FIT, // Esto ajusta el juego al móvil automáticamente
+        autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     physics: { default: 'arcade', arcade: { gravity: { y: 0 } } },
     scene: { preload: preload, create: create, update: update }
 };
@@ -27,30 +32,35 @@ const game = new Phaser.Game(config);
 function preload() {}
 
 function create() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-
-    player = this.add.rectangle(w * 0.15, h / 2, 40, 40, 0x00ffff);
+    // El jugador se dibuja en coordenadas fijas
+    player = this.add.rectangle(150, 300, 40, 40, 0x00ffff);
     this.physics.add.existing(player);
     player.body.setCollideWorldBounds(true);
     
     obstacles = this.physics.add.group();
 
-    let startText = this.add.text(w/2, h/2, 'TOUCH TO START', { fontSize: '32px', fill: '#00ffff' }).setOrigin(0.5);
+    let startText = this.add.text(400, 300, 'TOUCH TO START', { fontSize: '40px', fill: '#00ffff' }).setOrigin(0.5);
 
     this.input.on('pointerdown', () => {
         if (!gameStarted) {
             gameStarted = true;
             startText.destroy();
-            player.body.setVelocityY(450);
+            player.body.setVelocityY(400);
             
-            // LANZAR EL PRIMERO MANUALMENTE PARA FORZARLO
-            addObstacle.call(this); 
-            
-            // Programar los siguientes
+            // Generador de obstáculos manual
             this.time.addEvent({ 
-                delay: 1200, 
-                callback: addObstacle, 
+                delay: 1500, 
+                callback: () => {
+                    if (isGameOver) return;
+                    const isTop = Math.random() > 0.5;
+                    const py = isTop ? 0 : 400; // Posición fija arriba o abajo
+                    
+                    // Creamos el bloque en el borde derecho fijo (800)
+                    let obs = this.add.rectangle(850, py + 100, 60, 200, 0xffffff);
+                    this.physics.add.existing(obs);
+                    obs.body.setVelocityX(-400);
+                    obstacles.add(obs);
+                }, 
                 callbackScope: this, 
                 loop: true 
             });
@@ -60,26 +70,7 @@ function create() {
         }
     });
 
-    scoreText = this.add.text(w/2, 100, '0', { fontSize: '100px', fill: '#fff' }).setOrigin(0.5).setAlpha(0.2);
-}
-
-function addObstacle() {
-    if (isGameOver) return;
-    
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    
-    const isTop = Math.random() > 0.5;
-    const obsHeight = h * 0.4;
-    const py = isTop ? 0 : h - obsHeight;
-    
-    // Lo creamos un poco más a la izquierda (w + 10) para verlo antes
-    let obs = this.add.rectangle(w + 20, py + (obsHeight/2), 80, obsHeight, 0xffffff);
-    this.physics.add.existing(obs);
-    
-    // VELOCIDAD EXTREMA PARA ASEGURAR QUE PASA POR PANTALLA
-    obs.body.setVelocityX(-600); 
-    obstacles.add(obs);
+    scoreText = this.add.text(400, 100, '0', { fontSize: '100px', fill: '#fff' }).setOrigin(0.5).setAlpha(0.2);
 }
 
 function update() {

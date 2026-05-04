@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - HARDCORE</title>
+    <title>VOID - DUAL</title>
     <style>
         body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
         canvas { display: block; transition: filter 0.5s ease; }
@@ -46,7 +46,6 @@
     let trail = [];
     let stars = [];
 
-    // Estrellas de fondo
     for(let i = 0; i < 50; i++) {
         stars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 2, speed: Math.random() * 0.5 + 0.2 });
     }
@@ -56,8 +55,8 @@
         y: canvas.height / 2,
         size: 30,
         vy: 0,
-        gravity: 0.6, // Fuerza de caída
-        jump: -10,    // Fuerza de salto
+        gravity: 0.65, 
+        jump: -12,
         angle: 0
     };
 
@@ -67,17 +66,20 @@
     function spawnObstacle() {
         const type = Math.random();
         const w = 65;
+        const gap = 190;
+        // Decisión de color: 50% rosa, 50% azul
+        const obsColor = Math.random() > 0.5 ? '#ff00ff' : '#00ffff';
         
-        if (type < 0.6) {
-            // Obstáculo clásico (Arriba o Abajo)
-            const h = Math.random() * (canvas.height * 0.4) + (canvas.height * 0.2);
-            const isTop = Math.random() > 0.5;
-            obstacles.push({ x: canvas.width + 100, y: isTop ? 0 : canvas.height - h, w: w, h: h, edge: isTop ? '#ff00ff' : '#00ffff' });
+        if (type < 0.45) {
+            const minGateY = 80;
+            const maxGateY = canvas.height - gap - 80;
+            const gateY = Math.random() * (maxGateY - minGateY) + minGateY;
+            obstacles.push({ x: canvas.width + 100, y: 0, w: w, h: gateY, edge: obsColor });
+            obstacles.push({ x: canvas.width + 100, y: gateY + gap, w: w, h: canvas.height - (gateY + gap), edge: obsColor });
         } else {
-            // NUEVO: Obstáculo Central (Flotante)
-            const h = 180;
-            const y = Math.random() * (canvas.height - h - 200) + 100;
-            obstacles.push({ x: canvas.width + 100, y: y, w: w, h: h, edge: '#ffff00' }); // Amarillo neón para peligro central
+            const h = Math.random() * (canvas.height * 0.3) + 150;
+            const isTop = Math.random() > 0.5;
+            obstacles.push({ x: canvas.width + 100, y: isTop ? 0 : canvas.height - h, w: w, h: h, edge: obsColor });
         }
     }
 
@@ -92,11 +94,9 @@
     function update() {
         if (!gameStarted || gameOver) return;
         frame++;
-        
-        // FÍSICA FLAPPY
         player.vy += player.gravity;
         player.y += player.vy;
-        player.angle = Math.min(Math.PI/4, Math.max(-Math.PI/4, player.vy * 0.05)); // Inclina el cubo según cae/sube
+        player.angle = Math.min(Math.PI/4, Math.max(-Math.PI/4, player.vy * 0.04));
 
         stars.forEach(s => { s.x -= s.speed; if(s.x < 0) s.x = canvas.width; });
 
@@ -105,13 +105,18 @@
 
         if (player.y < 0 || player.y + player.size > canvas.height) endGame();
 
-        if (frame % Math.max(40, Math.floor(90 - score * 0.5)) === 0) spawnObstacle();
+        if (frame % Math.max(30, Math.floor(85 - score * 0.6)) === 0) spawnObstacle();
 
         obstacles.forEach((obs, index) => {
-            obs.x -= (gameSpeed + score * 0.15);
+            obs.x -= (gameSpeed + score * 0.22);
             if (player.x < obs.x + obs.w && player.x + player.size > obs.x &&
                 player.y < obs.y + obs.h && player.y + player.size > obs.y) endGame();
-            if (obs.x + obs.w < 0) { obstacles.splice(index, 1); score++; }
+            
+            if (!obs.passed && obs.x + obs.w < player.x) {
+                obs.passed = true;
+                if (index === 0 || obstacles[index-1].x !== obs.x) score++;
+            }
+            if (obs.x + obs.w < -100) obstacles.splice(index, 1);
         });
     }
 
@@ -125,50 +130,68 @@
     }
 
     function draw() {
-        let grd = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 5, canvas.width/2, canvas.height/2, canvas.width);
-        grd.addColorStop(0, "#0a0a1a"); grd.addColorStop(1, "#000000");
-        ctx.fillStyle = grd;
+        let grdBg = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 5, canvas.width/2, canvas.height/2, canvas.width);
+        grdBg.addColorStop(0, "#0a0a1a"); grdBg.addColorStop(1, "#000000");
+        ctx.fillStyle = grdBg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "#fff";
-        stars.forEach(s => { ctx.globalAlpha = 0.3; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill(); });
+        stars.forEach(s => { ctx.globalAlpha = 0.2; ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill(); });
         ctx.globalAlpha = 1.0;
 
         ctx.fillStyle = 'rgba(255,255,255,0.03)';
         ctx.font = 'bold 200px sans-serif'; ctx.textAlign = 'center';
         ctx.fillText(score, canvas.width/2, canvas.height/2 + 70);
 
-        // Estela
-        trail.forEach((t, i) => {
+        // JUGADOR DUAL (Azul + Rosa)
+        const drawPlayerBody = (x, y, size, angle, isTrail) => {
             ctx.save();
-            ctx.translate(t.x + player.size/2, t.y + player.size/2);
-            ctx.rotate(t.angle);
-            ctx.globalAlpha = i / trail.length * 0.3;
-            ctx.strokeStyle = '#00ffff';
-            ctx.strokeRect(-player.size/2, -player.size/2, player.size, player.size);
+            ctx.translate(x + size/2, y + size/2);
+            ctx.rotate(angle);
+            
+            // Degradado Dual
+            let pGrd = ctx.createLinearGradient(-size/2, -size/2, size/2, size/2);
+            pGrd.addColorStop(0, '#00ffff'); // Azul
+            pGrd.addColorStop(1, '#ff00ff'); // Rosa
+            
+            if (!isTrail) {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00ffff';
+            }
+            
+            ctx.fillStyle = pGrd;
+            ctx.fillRect(-size/2, -size/2, size, size);
+            
+            if (!isTrail) {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(-size/4, -size/4, size/2, size/2);
+            }
             ctx.restore();
+        };
+
+        // Dibujar Estela
+        trail.forEach((t, i) => {
+            ctx.globalAlpha = i / trail.length * 0.3;
+            drawPlayerBody(t.x, t.y, player.size, t.angle, true);
         });
         ctx.globalAlpha = 1.0;
 
-        // Jugador
-        ctx.save();
-        ctx.translate(player.x + player.size/2, player.y + player.size/2);
-        ctx.rotate(player.angle);
-        ctx.shadowBlur = 20; ctx.shadowColor = '#00ffff';
-        ctx.fillStyle = '#00ffff';
-        ctx.fillRect(-player.size/2, -player.size/2, player.size, player.size);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(-player.size/4, -player.size/4, player.size/2, player.size/2);
-        ctx.restore();
+        // Dibujar Jugador Actual
+        drawPlayerBody(player.x, player.y, player.size, player.angle, false);
         ctx.shadowBlur = 0;
 
-        // Obstáculos
+        // Obstáculos Puros
         obstacles.forEach(obs => {
-            ctx.fillStyle = '#111';
+            ctx.fillStyle = '#0a0a0a';
             ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
             ctx.strokeStyle = obs.edge;
             ctx.lineWidth = 3;
             ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+            
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = obs.edge;
+            ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+            ctx.globalAlpha = 1.0;
         });
 
         if (!gameStarted && !gameOver) {
@@ -182,10 +205,7 @@
 
     window.addEventListener('pointerdown', () => {
         if (gameOver) resetGame();
-        else {
-            gameStarted = true;
-            player.vy = player.jump; // Salto hacia arriba
-        }
+        else { gameStarted = true; player.vy = player.jump; }
     });
 
     draw();

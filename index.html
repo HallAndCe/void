@@ -3,38 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - Hyperdrive Edition</title>
+    <title>VOID - Absolute Edition</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
         body { margin: 0; background: #05000a; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; transition: background 0.8s; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
-        #ad-placeholder { position: absolute; bottom: 0; width: 100%; height: 50px; background: #111; border-top: 1px solid #333; z-index: 100; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #444; }
+        
         .menu-box { text-align: center; background: rgba(0,0,0,0.9); padding: 25px; border-radius: 25px; border: 2px solid var(--neon); backdrop-filter: blur(15px); display: none; pointer-events: auto; width: 85%; max-width: 320px; box-shadow: 0 0 30px rgba(0,255,255,0.2); }
-        h1 { font-size: 45px; letter-spacing: 10px; margin: 0 0 15px 0; text-shadow: 0 0 20px var(--neon); color: var(--neon); }
-        .btn { width: 100%; margin: 8px 0; padding: 16px; background: #111; color: white; border: 1px solid #444; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        h1 { font-size: 50px; letter-spacing: 12px; margin: 0 0 10px 0; text-shadow: 0 0 20px var(--neon); color: var(--neon); }
+        
+        .btn { width: 100%; margin: 8px 0; padding: 16px; background: #111; color: white; border: 1px solid #444; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 13px; transition: 0.2s; }
+        .btn:active { transform: scale(0.95); }
         .btn-main { border: 2px solid var(--pink); box-shadow: 0 0 15px rgba(255,0,255,0.3); }
         .btn-revive { border: 2px solid #4CAF50; color: #4CAF50; }
+        
+        .row { display: flex; gap: 10px; }
+        .small-text { font-size: 11px; color: #888; margin-bottom: 15px; }
+        #ad-placeholder { position: absolute; bottom: 0; width: 100%; height: 50px; background: #111; border-top: 1px solid #333; z-index: 100; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #444; }
     </style>
 </head>
 <body>
 
-    <div id="ad-placeholder">BANNER AD SLOT</div>
+    <div id="ad-placeholder">AD_BANNER_AREA</div>
     <canvas id="game"></canvas>
 
     <div id="ui-layer">
+        <!-- MENÚ PRINCIPAL -->
         <div id="menu-main" class="menu-box" style="display: block;">
             <h1>VOID</h1>
-            <div style="color:#888; margin-bottom:15px;">TOP: <span id="val-best">0</span></div>
-            <button class="btn btn-main" onclick="showMenu('none'); startGame()">INICIAR HYPERDRIVE</button>
-            <button class="btn" style="opacity:0.5">TIENDA (SOON)</button>
+            <div class="small-text">HIGH SCORE: <span id="val-best">0</span></div>
+            <button class="btn btn-main" onclick="startGame()">ENTRAR AL VACÍO</button>
+            <div class="row">
+                <button class="btn" onclick="showMenu('menu-opts')">AJUSTES</button>
+                <button class="btn" onclick="toggleLang()">ES/EN</button>
+            </div>
+            <button class="btn" style="opacity:0.4; pointer-events:none;">TIENDA</button>
         </div>
 
+        <!-- OPCIONES -->
+        <div id="menu-opts" class="menu-box">
+            <h2 style="color:var(--neon)">AJUSTES</h2>
+            <p class="small-text">SONIDO & VIBRACIÓN</p>
+            <button class="btn" onclick="alert('Ajustes guardados')">VOLUMEN: 100%</button>
+            <button class="btn" onclick="alert('Vibración activa')">HÁPTICO: SI</button>
+            <button class="btn btn-main" onclick="showMenu('menu-main')">VOLVER</button>
+        </div>
+
+        <!-- MUERTE -->
         <div id="menu-death" class="menu-box">
-            <h2 id="t-over" style="color:var(--pink)">VOIDED</h2>
-            <p style="font-size:22px;">SCORE: <span id="val-score">0</span></p>
-            <button id="btn-revive-ad" class="btn btn-revive" onclick="revivePlayer()">REVIVIR (AD)</button>
+            <h2 style="color:var(--pink)">COLISIÓN</h2>
+            <p style="font-size:24px; margin: 10px 0;">PUNTOS: <span id="val-score">0</span></p>
+            <button id="btn-revive-ad" class="btn btn-revive" onclick="revivePlayer()">REVIVIR (VER AD)</button>
             <button class="btn btn-main" onclick="startGame()">REINTENTAR</button>
+            <button class="btn" onclick="showMenu('menu-main')">MENÚ PRINCIPAL</button>
         </div>
     </div>
 
@@ -43,7 +65,7 @@
     const ctx = canvas.getContext('2d');
     
     let gameActive = false, score = 0, frame = 0, angle = 0;
-    let baseSpeed = 5, player, obstacles = [], stars = [], trail = [], particles = [];
+    let baseSpeed = 6, player, obstacles = [], stars = [], trail = [], particles = [];
     let highScore = localStorage.getItem('void_best') || 0;
     let lastY = 300, canRevive = true;
 
@@ -54,17 +76,20 @@
     window.addEventListener('resize', resize);
     resize();
 
-    function initStars() {
-        stars = [];
-        for(let i=0; i<80; i++) {
-            stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*3, v: Math.random()*2 + 1 });
-        }
-    }
-
     function showMenu(id) {
         document.querySelectorAll('.menu-box').forEach(m => m.style.display = 'none');
         if(id !== 'none') document.getElementById(id).style.display = 'block';
         gameActive = (id === 'none');
+    }
+
+    function toggleLang() {
+        const btn = document.querySelector('.btn-main');
+        btn.innerText = btn.innerText === "ENTRAR AL VACÍO" ? "ENTER THE VOID" : "ENTRAR AL VACÍO";
+    }
+
+    function initStars() {
+        stars = [];
+        for(let i=0; i<80; i++) stars.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()*3, v: Math.random()*2 + 1 });
     }
 
     function startGame() {
@@ -89,40 +114,15 @@
         const w = 70;
         const gap = Math.max(120, 210 - (score * 1.5));
         let h = Math.random() * (canvas.height - gap - 100) + 50;
-        lastY = h;
-
         const obsData = { x: canvas.width, w: w, p: false, seed: Math.random() };
-        if(type === 0) obstacles.push({...obsData, y: 0, h: h});
-        else if(type === 1) obstacles.push({...obsData, y: canvas.height - h, h: h});
-        else if(type === 2) obstacles.push({...obsData, y: h, h: 120});
-        else {
+
+        if(type === 0) obstacles.push({...obsData, y: 0, h: h}); // Bloque arriba
+        else if(type === 1) obstacles.push({...obsData, y: canvas.height - h, h: h}); // Bloque abajo
+        else if(type === 2) obstacles.push({...obsData, y: h, h: 120}); // Bloque medio
+        else { // Puerta
             obstacles.push({...obsData, y: 0, h: h});
             obstacles.push({...obsData, y: h + gap, h: canvas.height});
         }
-    }
-
-    function drawObstacle(o) {
-        let ox = o.x;
-        if(score >= 50 && frame % 15 < 2) ox += (Math.random()-0.5)*20;
-
-        ctx.save();
-        ctx.shadowBlur = 20; ctx.shadowColor = "#ff00ff";
-        ctx.fillStyle = score >= 100 ? "black" : "rgba(40, 0, 40, 0.8)";
-        ctx.strokeStyle = "#ff00ff";
-        ctx.lineWidth = 2;
-        ctx.fillRect(ox, o.y, o.w, o.h);
-        ctx.strokeRect(ox, o.y, o.w, o.h);
-
-        // EFECTO GRIETAS (Avanza con el score)
-        if(score >= 30) {
-            ctx.beginPath(); ctx.strokeStyle = "rgba(255, 0, 255, 0.5)";
-            for(let j=0; j<3; j++) {
-                ctx.moveTo(ox + o.w * o.seed, o.y);
-                ctx.lineTo(ox + o.w * (1-o.seed), o.y + o.h);
-            }
-            ctx.stroke();
-        }
-        ctx.restore();
     }
 
     function loop() {
@@ -130,44 +130,38 @@
         ctx.fillStyle = isGod ? "white" : "#05000a";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // SACUDIDA PROGRESIVA (30, 50, 100)
         if(gameActive && score >= 30) {
-            let s = score >= 100 ? 12 : 5;
+            let s = score >= 100 ? 12 : (score >= 50 ? 6 : 3);
             ctx.save(); ctx.translate((Math.random()-0.5)*s, (Math.random()-0.5)*s);
         }
 
-        // ESTRELLAS DINÁMICAS
+        // ESTRELLAS EVOLUTIVAS
         stars.forEach(s => {
-            let sSize = s.s + (score * 0.1); // Crecen con el score
-            let sSpeed = s.v * (baseSpeed/3);
+            let sSize = s.s + (score * 0.12);
             ctx.fillStyle = isGod ? "black" : "white";
-            // Si score > 50, se vuelven fugaces (estiradas)
-            if(score >= 50) {
-                ctx.fillRect(s.x, s.y, sSize * 5, sSize / 2);
-            } else {
-                ctx.fillRect(s.x, s.y, sSize, sSize);
-            }
-            if(gameActive) s.x -= sSpeed;
-            if(s.x < -50) s.x = canvas.width + 10;
+            if(score >= 50) ctx.fillRect(s.x, s.y, sSize * 6, sSize / 2); // Fugaces
+            else ctx.fillRect(s.x, s.y, sSize, sSize);
+            if(gameActive) s.x -= s.v * (baseSpeed/3.5);
+            if(s.x < -100) s.x = canvas.width + 10;
         });
 
-        // FUEGO ESPACIAL (Nivel 15)
+        // FUEGO ESPACIAL (Desde nivel 15)
         if(gameActive && score >= 15) {
             for(let i=0; i<3; i++) {
                 particles.push({ 
                     x: player.x, y: player.y + 13, 
-                    vx: -Math.random()*10 - 5, vy: (Math.random()-0.5)*8, 
-                    size: Math.random()*8, life: 1, 
+                    vx: -Math.random()*12 - 5, vy: (Math.random()-0.5)*10, 
+                    size: Math.random()*10, life: 1, 
                     color: score >= 100 ? "black" : (Math.random() > 0.5 ? "#00ffff" : "#ff00ff")
                 });
             }
         }
 
         particles.forEach((p, i) => {
-            p.x += p.vx; p.y += p.vy; p.life -= 0.03;
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = p.life;
-            ctx.fillRect(p.x, p.y, p.size, p.size);
-            ctx.globalAlpha = 1;
+            p.x += p.vx; p.y += p.vy; p.life -= 0.035;
+            ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+            ctx.fillRect(p.x, p.y, p.size, p.size); ctx.globalAlpha = 1;
             if(p.life <= 0) particles.splice(i, 1);
         });
 
@@ -176,38 +170,47 @@
                 frame++; angle += 0.15;
                 trail.push({x: player.x, y: player.y, a: angle});
                 if(trail.length > 40) trail.shift();
-                if(frame % Math.max(25, 70 - score) === 0) createObstacle();
+                if(frame % Math.max(25, 75 - score) === 0) createObstacle();
             }
 
-            // DIBUJAR JUGADOR Y EFECTOS
+            // JUGADOR
             if(gameActive) {
                 ctx.save(); ctx.translate(player.x + 13, player.y + 13);
-                if(score >= 50 && frame % 10 < 3) ctx.translate((Math.random()-0.5)*30, 0);
+                if(score >= 50 && frame % 10 < 3) ctx.translate((Math.random()-0.5)*30, 0); // Glitch
                 ctx.rotate(angle);
-                
-                // Efectos Evolutivos
-                ctx.shadowBlur = 20 + (score/2);
+                ctx.shadowBlur = 25 + (score/2);
                 ctx.shadowColor = isGod ? "black" : "#00ffff";
                 ctx.strokeStyle = isGod ? "black" : "#00ffff";
                 ctx.lineWidth = 3;
                 
-                if(score >= 30) { // RAYOS CONSTANTES
+                if(score >= 30) { // Rayos
                     for(let i=0; i<5; i++) {
                         ctx.beginPath(); ctx.moveTo(0,0);
-                        ctx.lineTo((Math.random()-0.5)*120, (Math.random()-0.5)*120);
-                        ctx.stroke();
+                        ctx.lineTo((Math.random()-0.5)*130, (Math.random()-0.5)*130); ctx.stroke();
                     }
                 }
-                
                 ctx.strokeRect(-13, -13, 26, 26);
                 ctx.fillStyle = isGod ? "black" : "white";
                 ctx.fillRect(-6, -6, 12, 12);
                 ctx.restore();
             }
 
+            // OBSTÁCULOS CON GRIETAS
             obstacles.forEach(o => {
                 if(gameActive) o.x -= baseSpeed;
-                drawObstacle(o);
+                ctx.save();
+                ctx.shadowBlur = 20; ctx.shadowColor = "#ff00ff";
+                ctx.fillStyle = isGod ? "black" : "rgba(30, 0, 40, 0.9)";
+                ctx.strokeStyle = "#ff00ff"; ctx.lineWidth = 2;
+                ctx.fillRect(o.x, o.y, o.w, o.h); ctx.strokeRect(o.x, o.y, o.w, o.h);
+                
+                if(score >= 30) { // Grietas dinámicas
+                    ctx.beginPath(); ctx.strokeStyle = "rgba(255, 0, 255, 0.4)";
+                    ctx.moveTo(o.x + o.w * o.seed, o.y); ctx.lineTo(o.x + o.w * (1-o.seed), o.y + o.h);
+                    ctx.stroke();
+                }
+                ctx.restore();
+
                 if (gameActive && player.x + 5 < o.x + o.w && player.x + 21 > o.x && player.y + 5 < o.y + o.h && player.y + 21 > o.y) endGame();
                 if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; baseSpeed += 0.25; }
             });
@@ -215,9 +218,9 @@
             if(obstacles.length > 20) obstacles.shift();
             if(gameActive && score >= 30) ctx.restore();
 
-            ctx.fillStyle = isGod ? "rgba(0,0,0,0.1)" : "rgba(0,255,255,0.1)";
-            ctx.font = "bold 120px sans-serif"; ctx.textAlign = "center";
-            ctx.fillText(score, canvas.width/2, canvas.height/2 + 40);
+            ctx.fillStyle = isGod ? "rgba(0,0,0,0.15)" : "rgba(0,255,255,0.1)";
+            ctx.font = "bold 130px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText(score, canvas.width/2, canvas.height/2 + 45);
         }
 
         if(gameActive) {
@@ -242,7 +245,7 @@
     });
 
     document.getElementById('val-best').innerText = highScore;
-    loop();
+    initStars(); loop();
 </script>
 </body>
 </html>

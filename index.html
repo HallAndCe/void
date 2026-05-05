@@ -3,23 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - Monetized Edition</title>
+    <title>VOID - Ultimate Evolution</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
-        body { margin: 0; background: #020205; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; transition: background 0.5s; }
+        body { margin: 0; background: #020205; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; transition: background 0.8s; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
-        
-        /* Banner de publicidad */
         #ad-placeholder { position: absolute; bottom: 0; width: 100%; height: 50px; background: #111; border-top: 1px solid #333; z-index: 100; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #444; }
-
         .menu-box { text-align: center; background: rgba(0,0,0,0.95); padding: 25px; border-radius: 25px; border: 2px solid #333; backdrop-filter: blur(15px); display: none; pointer-events: auto; width: 85%; max-width: 320px; }
         h1 { font-size: 45px; letter-spacing: 10px; margin: 0 0 15px 0; text-shadow: 0 0 20px var(--neon); color: var(--neon); }
         .btn { width: 100%; margin: 8px 0; padding: 16px; background: #111; color: white; border: 1px solid #444; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 13px; }
         .btn-main { border: 2px solid var(--pink); box-shadow: 0 0 15px rgba(255,0,255,0.2); }
-        .btn-revive { border: 2px solid #4CAF50; color: #4CAF50; margin-bottom: 5px; }
+        .btn-revive { border: 2px solid #4CAF50; color: #4CAF50; }
         .btn-disabled { opacity: 0.4; font-size: 10px; cursor: default; }
-        
         .slider-container { margin: 15px 0; text-align: left; }
         .slider-label { font-size: 11px; color: var(--neon); text-transform: uppercase; }
         input[type=range] { width: 100%; margin-top: 8px; cursor: pointer; accent-color: var(--neon); }
@@ -27,21 +23,19 @@
 </head>
 <body>
 
-    <div id="ad-placeholder">BANNER AD (320x50) - ADMOB SLOT</div>
+    <div id="ad-placeholder">BANNER AD SLOT (320x50)</div>
 
     <canvas id="game"></canvas>
 
     <div id="ui-layer">
-        <!-- MENU PRINCIPAL -->
         <div id="menu-main" class="menu-box" style="display: block;">
             <h1>VOID</h1>
-            <div style="color:#888; margin-bottom:15px;"><span id="t-best">RÉCORD</span>: <span id="val-best">0</span></div>
+            <div style="color:#888; margin-bottom:15px;">BEST: <span id="val-best">0</span></div>
             <button class="btn btn-main" onclick="showMenu('menu-play')">INICIAR</button>
             <button class="btn" onclick="showMenu('menu-opts')">OPCIONES</button>
             <button class="btn btn-disabled">TIENDA (COMING SOON)</button>
         </div>
 
-        <!-- MODOS -->
         <div id="menu-play" class="menu-box">
             <h2 style="color:var(--neon)">MODOS</h2>
             <button class="btn btn-main" onclick="startGame()">MODO INFINITO</button>
@@ -49,7 +43,6 @@
             <button class="btn" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
 
-        <!-- OPCIONES -->
         <div id="menu-opts" class="menu-box">
             <h2 style="color:var(--neon)">AJUSTES</h2>
             <div class="slider-container"><div class="slider-label">SONIDO</div><input type="range"></div>
@@ -57,12 +50,11 @@
             <button class="btn" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
 
-        <!-- MUERTE -->
         <div id="menu-death" class="menu-box">
             <h2 id="t-over" style="color:var(--pink)">VOIDED</h2>
             <p style="font-size:22px;">SCORE: <span id="val-score">0</span></p>
-            <button id="btn-revive-ad" class="btn btn-revive" onclick="revivePlayer()">REINTENTAR (+1 VIDA)</button>
-            <button class="btn btn-main" onclick="startGame()">NUEVA PARTIDA</button>
+            <button id="btn-revive-ad" class="btn btn-revive" onclick="revivePlayer()">SEGUIR (AD)</button>
+            <button class="btn btn-main" onclick="startGame()">REINTENTAR</button>
             <button class="btn" onclick="showMenu('menu-main')">MENÚ</button>
         </div>
     </div>
@@ -74,7 +66,7 @@
     let gameActive = false, score = 0, frame = 0, angle = 0;
     let baseSpeed = 5, player, obstacles = [], stars = [], trail = [], particles = [];
     let highScore = localStorage.getItem('void_best') || 0;
-    let lastGateY = 300, canRevive = true;
+    let lastY = 300, canRevive = true;
 
     function resize() {
         canvas.width = window.innerWidth;
@@ -94,8 +86,7 @@
     function startGame() {
         player = { x: canvas.width * 0.15, y: canvas.height/2, size: 26, vy: 0, gravity: 0.6, jump: -9 };
         obstacles = []; trail = []; particles = []; score = 0; frame = 0; baseSpeed = 5;
-        lastGateY = canvas.height / 2;
-        canRevive = true;
+        lastY = canvas.height / 2; canRevive = true;
         document.body.style.background = "#020205";
         showMenu('none');
     }
@@ -103,13 +94,9 @@
     function revivePlayer() {
         if(!canRevive) return;
         canRevive = false;
-        // Limpiar obstáculos cercanos
-        obstacles = obstacles.filter(o => o.x > player.x + 400 || o.x < player.x - 100);
-        player.y = canvas.height / 2;
-        player.vy = 0;
-        gameActive = true;
-        showMenu('none');
-        // Efecto visual de onda de choque
+        obstacles = obstacles.filter(o => o.x > player.x + 500 || o.x < player.x);
+        player.y = canvas.height / 2; player.vy = 0;
+        gameActive = true; showMenu('none');
         createExplosion(player.x, player.y, "white");
     }
 
@@ -120,40 +107,55 @@
     }
 
     function createObstacle() {
-        const w = 75;
-        const gap = Math.max(135, 200 - (score * 1.3)); 
-        let minY = Math.max(50, lastGateY - 220);
-        let maxY = Math.min(canvas.height - gap - 50, lastGateY + 220);
-        let wallH = Math.random() * (maxY - minY) + minY;
-        lastGateY = wallH;
-        obstacles.push({ x: canvas.width, y: 0, w: w, h: wallH, p: false });
-        obstacles.push({ x: canvas.width, y: wallH + gap, w: w, h: canvas.height, p: false }); 
+        const type = Math.floor(Math.random() * 4);
+        const w = 70;
+        const gap = Math.max(130, 205 - (score * 1.3));
+        let minY = Math.max(80, lastY - 200);
+        let maxY = Math.min(canvas.height - 200, lastY + 200);
+        let h = Math.random() * (maxY - minY) + minY;
+        lastY = h;
+
+        switch(type) {
+            case 0: obstacles.push({ x: canvas.width, y: 0, w: w, h: h, p: false }); break;
+            case 1: obstacles.push({ x: canvas.width, y: canvas.height - h, w: w, h: h, p: false }); break;
+            case 2: obstacles.push({ x: canvas.width, y: h, w: w, h: 120, p: false }); break;
+            case 3: 
+                obstacles.push({ x: canvas.width, y: 0, w: w, h: h, p: false });
+                obstacles.push({ x: canvas.width, y: h + gap, w: w, h: canvas.height, p: false }); break;
+        }
     }
 
     function loop() {
-        if(gameActive && score >= 100) {
-            ctx.fillStyle = "white";
-            document.body.style.background = "white";
+        // NIVEL 100: CAMBIO DE FONDO ÉPICO
+        let isGodMode = gameActive && score >= 100;
+        if(isGodMode) {
+            ctx.fillStyle = "white"; document.body.style.background = "white";
         } else {
             ctx.fillStyle = '#020205';
         }
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // SACUDIDA (Escala con score)
         if(gameActive && score >= 30) {
-            let shake = score >= 100 ? 8 : 4;
-            ctx.save(); ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake);
+            let s = score >= 100 ? 10 : (score >= 50 ? 5 : 2);
+            ctx.save(); ctx.translate((Math.random()-0.5)*s, (Math.random()-0.5)*s);
         }
 
         stars.forEach(s => {
-            ctx.fillStyle = (gameActive && score >= 100) ? "black" : "white";
+            ctx.fillStyle = isGodMode ? "black" : "rgba(255,255,255,0.4)";
             ctx.fillRect(s.x, s.y, s.s, s.s);
             if(gameActive) s.x -= s.v * (baseSpeed/5);
             if(s.x < 0) s.x = canvas.width;
         });
 
+        // RASTRO CENIZA (Nivel 75)
+        if(gameActive && score >= 75 && frame % 2 === 0) {
+            particles.push({ x: player.x, y: player.y+13, vx: -4, vy: (Math.random()-0.5)*4, size: 4, life: 0.8, color: "#00ffff" });
+        }
+
         particles.forEach((p, i) => {
             p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-            ctx.fillStyle = (gameActive && score >= 100) ? `rgba(0,0,0,${p.life})` : `rgba(0, 255, 255, ${p.life})`;
+            ctx.fillStyle = isGodMode ? `rgba(0,0,0,${p.life})` : `rgba(0, 255, 255, ${p.life})`;
             ctx.fillRect(p.x, p.y, p.size, p.size);
             if(p.life <= 0) particles.splice(i, 1);
         });
@@ -163,52 +165,66 @@
                 frame++; angle += 0.15;
                 trail.push({x: player.x, y: player.y, a: angle});
                 if(trail.length > (score >= 50 ? 60 : 25)) trail.shift();
-                if(frame % Math.max(30, 80 - score) === 0) createObstacle();
+                if(frame % Math.max(28, 80 - score) === 0) createObstacle();
             }
 
+            // DIBUJAR ESTELA (Mejora en nivel 15)
             trail.forEach((t, i) => {
                 ctx.save(); ctx.translate(t.x + 13, t.y + 13); ctx.rotate(t.a);
-                let op = i / (score >= 50 ? 80 : 40);
-                ctx.strokeStyle = (gameActive && score >= 100) ? `rgba(0,0,0,${op})` : `rgba(0, 255, 255, ${op})`;
+                let op = i / (score >= 15 ? 50 : 30);
+                ctx.strokeStyle = isGodMode ? `rgba(0,0,0,${op})` : `rgba(0, 255, 255, ${op})`;
                 ctx.strokeRect(-13, -13, 26, 26); ctx.restore();
             });
 
             if(gameActive) {
                 ctx.save(); ctx.translate(player.x + 13, player.y + 13);
-                if(score >= 50 && frame % 10 < 2) ctx.translate((Math.random()-0.5)*15, 0);
+                
+                // GLITCH (Nivel 50)
+                if(score >= 50 && frame % 15 < 3) ctx.translate((Math.random()-0.5)*25, 0);
+                
                 ctx.rotate(angle);
-                if(score >= 10) {
-                    ctx.shadowBlur = score >= 100 ? 50 : 30; ctx.shadowColor = score >= 100 ? "black" : "#00ffff";
-                    ctx.strokeStyle = score >= 100 ? "black" : "#00ffff"; ctx.lineWidth = 4;
-                    ctx.strokeRect(-13, -13, 26, 26);
+                
+                // SISTEMA DE EVOLUCIÓN VISUAL
+                if(score >= 5) { // NIVEL 5: Brillo básico
+                    ctx.shadowBlur = 15; ctx.shadowColor = "#00ffff";
+                    ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 2;
+                } else { ctx.strokeStyle = "white"; ctx.lineWidth = 2; }
+                
+                if(score >= 15) { // NIVEL 15: Aura de poder
+                    ctx.shadowBlur = 40; ctx.lineWidth = 4;
                 }
-                if(score >= 25) {
+                
+                if(score >= 30) { // NIVEL 30: Rayos de energía
                     for(let i=0; i<4; i++) {
-                        ctx.beginPath(); ctx.strokeStyle = score >= 100 ? "black" : "white";
-                        ctx.moveTo(0,0); ctx.lineTo((Math.random()-0.5)*80, (Math.random()-0.5)*80); ctx.stroke();
+                        ctx.beginPath(); ctx.strokeStyle = isGodMode ? "black" : "white";
+                        ctx.moveTo(0,0); ctx.lineTo((Math.random()-0.5)*90, (Math.random()-0.5)*90); ctx.stroke();
                     }
                 }
-                ctx.fillStyle = score >= 100 ? "black" : "white";
+                
+                ctx.fillStyle = isGodMode ? "black" : "white";
+                ctx.strokeRect(-13, -13, 26, 26);
                 ctx.fillRect(-6, -6, 12, 12); ctx.restore();
             }
 
             obstacles.forEach((o, i) => {
                 if(gameActive) o.x -= baseSpeed;
-                let ox = o.x; if(score >= 50 && frame % 15 < 2) ox += (Math.random()-0.5)*10;
-                ctx.shadowBlur = score >= 25 ? 20 : 0; ctx.shadowColor = "#ff00ff";
-                ctx.fillStyle = score >= 100 ? "rgba(0,0,0,0.8)" : "rgba(255, 0, 255, 0.2)";
-                ctx.strokeStyle = score >= 100 ? "black" : "#ff00ff"; ctx.lineWidth = 3;
+                let ox = o.x; 
+                if(score >= 50 && frame % 25 < 2) ox += (Math.random()-0.5)*20;
+                ctx.shadowBlur = score >= 30 ? 25 : 0; ctx.shadowColor = "#ff00ff";
+                ctx.fillStyle = isGodMode ? "rgba(0,0,0,0.8)" : "rgba(255, 0, 255, 0.15)";
+                ctx.strokeStyle = isGodMode ? "black" : "#ff00ff"; ctx.lineWidth = 3;
                 ctx.fillRect(ox, o.y, o.w, o.h); ctx.strokeRect(ox, o.y, o.w, o.h);
                 
                 if (gameActive && player.x + 6 < ox + o.w && player.x + 20 > ox && player.y + 6 < o.y + o.h && player.y + 20 > o.y) {
-                    createExplosion(player.x + 13, player.y + 13, "#00ffff");
-                    endGame();
+                    createExplosion(player.x + 13, player.y + 13, "#00ffff"); endGame();
                 }
-                if (gameActive && !o.p && ox < player.x) { o.p = true; score++; baseSpeed += 0.25; }
+                if (gameActive && !o.p && ox < player.x) { o.p = true; score++; baseSpeed += 0.28; }
             });
-            if(obstacles.length > 25) obstacles.splice(0,1);
-            if(gameActive && score >= 30) ctx.restore();
-            ctx.fillStyle = score >= 100 ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.05)";
+            
+            if(obstacles.length > 30) obstacles.shift();
+            if(gameActive && score >= 30) ctx.restore(); // Quitar sacudida para el HUD
+            
+            ctx.fillStyle = isGodMode ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.05)";
             ctx.font = "bold 150px sans-serif"; ctx.textAlign = "center";
             ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
         }

@@ -71,7 +71,6 @@
             <button class="btn t-menu" onclick="showMenu('menu-main')">MENÚ PRINCIPAL</button>
         </div>
     </div>
-
 <script>
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -81,21 +80,56 @@
     let highScore = localStorage.getItem('void_best') || 0;
     let canRevive = true, lastObstacleX = 0, lastType = -1;
 
+    // --- CONFIGURACIÓN DE AUDIO ---
+    const VOID_AUDIO = {
+        bgm: new Audio('music_loop.mp3'),
+        jump: new Audio('sfx_jump.mp3'),
+        death: new Audio('sfx_death.mp3'),
+        isInitialized: false,
+        init() {
+            if (this.isInitialized) return;
+            this.bgm.loop = true;
+            this.updateVolumes();
+            this.isInitialized = true;
+        },
+        updateVolumes() {
+            const masterVol = document.querySelector('input[type=range]').value / 100;
+            const fxMult = document.getElementById('fx-slider').value / 100;
+            this.bgm.volume = masterVol * 0.4; // Música ambiente suave
+            this.jump.volume = masterVol * fxMult;
+            this.death.volume = masterVol * fxMult;
+        }
+    };
+
+    // --- CONFIGURACIÓN DE MONETIZACIÓN ---
+    const AdService = {
+        appId: "ca-app-pub-6102755042695550~6881775176",
+        bannerId: "ca-app-pub-6102755042695550/9996999468",
+        rewardedId: "ca-app-pub-6102755042695550/8797581362",
+        async showRewarded() {
+            VOID_AUDIO.bgm.pause();
+            // Simulación para testing (Capacitor activará el anuncio real aquí)
+            const adSuccess = confirm("¿Ver anuncio completo para revivir?"); 
+            if(adSuccess) {
+                revivePlayer();
+                VOID_AUDIO.bgm.play();
+            } else {
+                VOID_AUDIO.bgm.play();
+            }
+        }
+    };
+
     const texts = {
-        ES: { start: "ENTRAR AL VACÍO", opts: "AJUSTES", shop: "TIENDA", back: "VOLVER", dead: "COLISIÓN", revive: "REVIVIR (VER AD)", retry: "REINTENTAR", menu: "MENÚ PRINCIPAL", score: "PUNTOS", best: "PUNTUACIÓN MÁXIMA", vol: "VOLUMEN", fx: "INTENSIDAD FX" },
-        EN: { start: "ENTER THE VOID", opts: "SETTINGS", shop: "SHOP", back: "BACK", dead: "COLLISION", revive: "REVIVE (WATCH AD)", retry: "RETRY", menu: "MAIN MENU", score: "SCORE", best: "HIGH SCORE", vol: "VOLUME", fx: "FX INTENSITY" }
+        ES: { start: "ENTRAR AL VACÍO", opts: "AJUSTES", shop: "TIENDA", back: "VOLVER", dead: "COLISIÓN", revive: "REVIVIR (VER AD)", retry: "REINTENTAR", menu: "MENÚ PRINCIPAL", score: "PUNTOS", best: "MÁXIMA", vol: "VOLUMEN", fx: "INTENSIDAD FX" },
+        EN: { start: "ENTER THE VOID", opts: "SETTINGS", shop: "SHOP", back: "BACK", dead: "COLLISION", revive: "REVIVE (WATCH AD)", retry: "RETRY", menu: "MAIN MENU", score: "SCORE", best: "BEST", vol: "VOLUME", fx: "FX INTENSITY" }
     };
 
     function toggleLang() {
         lang = lang === 'ES' ? 'EN' : 'ES';
         document.getElementById('lang-toggle').innerText = lang;
-        
-        // Actualizamos todos los elementos que tengan una clase que empiece por "t-"
         for (const key in texts[lang]) {
             const elements = document.querySelectorAll('.t-' + key);
-            elements.forEach(el => {
-                el.innerText = texts[lang][key];
-            });
+            elements.forEach(el => el.innerText = texts[lang][key]);
         }
     }
 
@@ -119,6 +153,10 @@
     }
 
     function startGame() {
+        VOID_AUDIO.init();
+        VOID_AUDIO.bgm.currentTime = 0;
+        VOID_AUDIO.bgm.play().catch(() => {});
+        
         player = { x: canvas.width * 0.15, y: canvas.height/2, size: 26, vy: 0, gravity: 0.6, jump: -9 };
         obstacles = []; particles = []; score = 0; frame = 0; baseSpeed = 6;
         canRevive = true; lastObstacleX = 0; lastType = -1;
@@ -127,7 +165,6 @@
     }
 
     function revivePlayer() {
-        if(!canRevive) return;
         canRevive = false;
         obstacles = obstacles.filter(o => o.x > player.x + 600 || o.x < player.x);
         player.y = canvas.height / 2; player.vy = 0;
@@ -142,7 +179,7 @@
         if (type === 3 && lastType === 3) type = Math.floor(Math.random() * 3);
         
         const w = 75;
-        const gap = Math.max(140, 240 - (score * 1.5));
+        const gap = Math.max(145, 245 - (score * 1.5));
         let h = Math.random() * (canvas.height - gap - 160) + 80;
         const obsData = { x: canvas.width, w: w, p: false, seed: Math.random() };
 
@@ -156,13 +193,13 @@
         } else {
             obstacles.push({...obsData, y: h, h: 110});
         }
-        
         lastObstacleX = canvas.width;
         lastType = type;
     }
 
     function loop() {
         const fxMult = document.getElementById('fx-slider').value / 100;
+        VOID_AUDIO.updateVolumes();
         let isGod = gameActive && score >= 100;
         ctx.fillStyle = isGod ? "white" : "#05000a";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -214,12 +251,6 @@
                 ctx.shadowColor = isGod ? "black" : "#00ffff";
                 ctx.strokeStyle = isGod ? "black" : "#00ffff";
                 ctx.lineWidth = 3;
-                if(score >= 30 && fxMult > 0.5) {
-                    for(let i=0; i<5; i++) {
-                        ctx.beginPath(); ctx.moveTo(0,0);
-                        ctx.lineTo((Math.random()-0.5)*130, (Math.random()-0.5)*130); ctx.stroke();
-                    }
-                }
                 ctx.strokeRect(-13, -13, 26, 26);
                 ctx.fillStyle = isGod ? "black" : "white";
                 ctx.fillRect(-6, -6, 12, 12);
@@ -233,14 +264,9 @@
                 ctx.fillStyle = isGod ? "black" : "rgba(30, 0, 40, 0.9)";
                 ctx.strokeStyle = "#ff00ff"; ctx.lineWidth = 2;
                 ctx.fillRect(o.x, o.y, o.w, o.h); ctx.strokeRect(o.x, o.y, o.w, o.h);
-                if(score >= 30) {
-                    ctx.beginPath(); ctx.strokeStyle = "rgba(255, 0, 255, 0.4)";
-                    ctx.moveTo(o.x + o.w * o.seed, o.y); ctx.lineTo(o.x + o.w * (1-o.seed), o.y + o.h);
-                    ctx.stroke();
-                }
                 ctx.restore();
 
-                let hb = 5; 
+                let hb = 6; 
                 if (gameActive && player.x + hb < o.x + o.w && player.x + 26 - hb > o.x && player.y + hb < o.y + o.h && player.y + 26 - hb > o.y) endGame();
                 if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; baseSpeed += 0.2; }
             });
@@ -262,6 +288,8 @@
 
     function endGame() {
         gameActive = false;
+        VOID_AUDIO.bgm.pause();
+        VOID_AUDIO.death.play();
         highScore = Math.max(score, highScore);
         localStorage.setItem('void_best', highScore);
         document.getElementById('val-best').innerText = highScore;
@@ -271,7 +299,10 @@
     }
 
     window.addEventListener('pointerdown', (e) => { 
-        if(gameActive && e.target.id !== 'lang-toggle' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') player.vy = player.jump; 
+        if(gameActive && e.target.id !== 'lang-toggle' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
+            player.vy = player.jump;
+            VOID_AUDIO.jump.play();
+        }
     });
 
     document.getElementById('val-best').innerText = highScore;

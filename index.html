@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - God Mode Edition</title>
+    <title>VOID - God Mode Edition (Fixed)</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
         body { margin: 0; background: #020205; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; transition: background 0.5s; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
-        
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
-        
         .menu-box { text-align: center; background: rgba(0,0,0,0.95); padding: 30px; border-radius: 25px; border: 2px solid #333; backdrop-filter: blur(15px); display: none; pointer-events: auto; width: 85%; max-width: 320px; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
         h1 { font-size: 50px; letter-spacing: 12px; margin: 0 0 20px 0; text-shadow: 0 0 20px var(--neon); color: var(--neon); }
         .btn { width: 100%; margin: 12px 0; padding: 18px; background: #111; color: white; border: 1px solid #444; border-radius: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 14px; }
@@ -84,6 +82,7 @@
     let baseSpeed = 5; 
     let player, obstacles = [], stars = [], trail = [], particles = [];
     let highScore = localStorage.getItem('void_best') || 0;
+    let lastGateY = 300; // Para asegurar que el juego sea posible físicamente
 
     function resize() {
         canvas.width = window.innerWidth;
@@ -103,6 +102,7 @@
     function startGame() {
         player = { x: canvas.width * 0.15, y: canvas.height/2, size: 26, vy: 0, gravity: 0.6, jump: -9 };
         obstacles = []; trail = []; particles = []; score = 0; frame = 0; baseSpeed = 5;
+        lastGateY = canvas.height / 2;
         document.body.style.background = "#020205";
         showMenu('none');
     }
@@ -115,14 +115,20 @@
 
     function createObstacle() {
         const w = 75;
-        const gap = Math.max(120, 190 - (score * 1.2)); 
-        let wallH = Math.random() * (canvas.height - gap - 100) + 50;
+        const gap = Math.max(130, 200 - (score * 1.3)); 
+        
+        // ALGORITMO DE FÍSICA POSIBLE: Limita la diferencia de altura respecto al anterior
+        let minY = Math.max(50, lastGateY - 220);
+        let maxY = Math.min(canvas.height - gap - 50, lastGateY + 220);
+        let wallH = Math.random() * (maxY - minY) + minY;
+        
+        lastGateY = wallH; // Guardamos para el siguiente
+
         obstacles.push({ x: canvas.width, y: 0, w: w, h: wallH, p: false });
         obstacles.push({ x: canvas.width, y: wallH + gap, w: w, h: canvas.height, p: false }); 
     }
 
     function loop() {
-        // NIVEL 100: Fondo Blanco (Inversión)
         if(gameActive && score >= 100) {
             ctx.fillStyle = "white";
             document.body.style.background = "white";
@@ -131,7 +137,6 @@
         }
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // SACUDIDA (Aumenta con el score)
         if(gameActive && score >= 30) {
             let shake = score >= 100 ? 8 : 4;
             ctx.save();
@@ -145,7 +150,6 @@
             if(s.x < 0) s.x = canvas.width;
         });
 
-        // Partículas (Ceniza a partir de 75 pts)
         if(gameActive && score >= 75 && frame % 2 === 0) {
             particles.push({ x: player.x, y: player.y+13, vx: -Math.random()*5, vy: (Math.random()-0.5)*3, size: 3, life: 1, color: "#00ffff" });
         }
@@ -163,10 +167,9 @@
                 trail.push({x: player.x, y: player.y, a: angle});
                 let maxTrail = score >= 50 ? 60 : 25;
                 if(trail.length > maxTrail) trail.shift();
-                if(frame % Math.max(30, 75 - score) === 0) createObstacle();
+                if(frame % Math.max(30, 80 - score) === 0) createObstacle();
             }
 
-            // ESTELA
             trail.forEach((t, i) => {
                 ctx.save();
                 ctx.translate(t.x + 13, t.y + 13);
@@ -177,16 +180,11 @@
                 ctx.restore();
             });
 
-            // JUGADOR
             if(gameActive) {
                 ctx.save();
                 ctx.translate(player.x + 13, player.y + 13);
-                
-                // Efecto Glitch (50 pts)
                 if(score >= 50 && frame % 10 < 2) ctx.translate((Math.random()-0.5)*15, 0);
-
                 ctx.rotate(angle);
-                
                 if(score >= 10) {
                     ctx.shadowBlur = score >= 100 ? 50 : 30; 
                     ctx.shadowColor = score >= 100 ? "black" : "#00ffff";
@@ -194,7 +192,6 @@
                     ctx.lineWidth = 4;
                     ctx.strokeRect(-13, -13, 26, 26);
                 }
-
                 if(score >= 25) {
                     for(let i=0; i<4; i++) {
                         ctx.beginPath(); ctx.strokeStyle = score >= 100 ? "black" : "white";
@@ -207,14 +204,10 @@
                 ctx.restore();
             }
 
-            // OBSTÁCULOS
             obstacles.forEach((o, i) => {
                 if(gameActive) o.x -= baseSpeed;
-                
-                // Glitch en obstáculos (50 pts)
                 let ox = o.x;
                 if(score >= 50 && frame % 15 < 2) ox += (Math.random()-0.5)*10;
-
                 ctx.shadowBlur = score >= 25 ? 20 : 0; ctx.shadowColor = "#ff00ff";
                 ctx.fillStyle = score >= 100 ? "rgba(0,0,0,0.8)" : "rgba(255, 0, 255, 0.2)";
                 ctx.strokeStyle = score >= 100 ? "black" : "#ff00ff";
@@ -226,7 +219,7 @@
                     createExplosion(player.x + 13, player.y + 13, "#00ffff");
                     endGame();
                 }
-                if (gameActive && !o.p && ox < player.x) { o.p = true; score++; baseSpeed += 0.3; }
+                if (gameActive && !o.p && ox < player.x) { o.p = true; score++; baseSpeed += 0.25; }
             });
             if(obstacles.length > 25) obstacles.splice(0,1);
             

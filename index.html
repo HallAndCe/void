@@ -3,40 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOID - Epic Edition</title>
+    <title>VOID - God Mode Edition</title>
     <style>
         :root { --neon: #00ffff; --pink: #ff00ff; }
-        body { margin: 0; background: #020205; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; }
+        body { margin: 0; background: #020205; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; transition: background 0.5s; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
         
-        #ad-banner { 
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 50px; 
-            background: #111; border-top: 1px solid #333; display: flex; 
-            align-items: center; justify-content: center; font-size: 10px; color: #444; z-index: 100;
-        }
-
         .menu-box { text-align: center; background: rgba(0,0,0,0.95); padding: 30px; border-radius: 25px; border: 2px solid #333; backdrop-filter: blur(15px); display: none; pointer-events: auto; width: 85%; max-width: 320px; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
-        
         h1 { font-size: 50px; letter-spacing: 12px; margin: 0 0 20px 0; text-shadow: 0 0 20px var(--neon); color: var(--neon); }
-        
-        .btn { width: 100%; margin: 12px 0; padding: 18px; background: #111; color: white; border: 1px solid #444; border-radius: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 14px; transition: 0.3s; }
+        .btn { width: 100%; margin: 12px 0; padding: 18px; background: #111; color: white; border: 1px solid #444; border-radius: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 14px; }
         .btn-main { border: 2px solid var(--pink); box-shadow: 0 0 15px rgba(255,0,255,0.2); }
-        .btn-disabled { opacity: 0.4; font-size: 10px; cursor: default; }
-        
         .slider-container { margin: 20px 0; text-align: left; }
-        .slider-label { font-size: 12px; color: var(--neon); text-transform: uppercase; letter-spacing: 1px; }
+        .slider-label { font-size: 12px; color: var(--neon); text-transform: uppercase; }
         input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; accent-color: var(--neon); }
-
         .lang-selector { position: absolute; top: 20px; right: 20px; pointer-events: auto; z-index: 20; }
-        .lang-btn { background: rgba(255,255,255,0.05); border: 1px solid #444; color: #888; padding: 6px 12px; border-radius: 8px; margin-left: 5px; cursor: pointer; font-size: 12px; }
-        .lang-active { border-color: var(--neon); color: var(--neon); background: rgba(0,255,255,0.1); }
+        .lang-btn { background: rgba(255,255,255,0.05); border: 1px solid #444; color: #888; padding: 6px 12px; border-radius: 8px; margin-left: 5px; cursor: pointer; }
+        .lang-active { border-color: var(--neon); color: var(--neon); }
     </style>
 </head>
 <body>
-
-    <div id="ad-banner">ADVERTISEMENT - GOOGLE ADMOB PLACEHOLDER</div>
 
     <div class="lang-selector">
         <button id="l-es" class="lang-btn lang-active" onclick="setLanguage('es')">ESP</button>
@@ -46,38 +33,26 @@
     <canvas id="game"></canvas>
 
     <div id="ui-layer">
-        <!-- MENU PRINCIPAL -->
         <div id="menu-main" class="menu-box" style="display: block;">
             <h1>VOID</h1>
             <div style="color:#888; margin-bottom:20px;"><span id="t-best">RÉCORD</span>: <span id="val-best">0</span></div>
             <button class="btn btn-main" id="b-start" onclick="showMenu('menu-play')">INICIAR</button>
             <button class="btn" id="b-opts" onclick="showMenu('menu-opts')">OPCIONES</button>
-            <button class="btn btn-disabled" id="b-store">TIENDA (PRÓXIMAMENTE)</button>
         </div>
 
-        <!-- MODO DE JUEGO -->
         <div id="menu-play" class="menu-box">
             <h2 id="t-modes" style="color:var(--neon)">MODOS</h2>
             <button class="btn btn-main" id="b-inf" onclick="startGame()">MODO INFINITO</button>
-            <button class="btn btn-disabled" id="b-levels">NIVELES (PRONTO)</button>
             <button class="btn" id="b-back" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
 
-        <!-- OPCIONES -->
         <div id="menu-opts" class="menu-box">
             <h2 id="t-opts-title" style="color:var(--neon)">OPCIONES</h2>
-            <div class="slider-container">
-                <div class="slider-label" id="t-sound">SONIDO</div>
-                <input type="range" min="0" max="100" value="80">
-            </div>
-            <div class="slider-container">
-                <div class="slider-label" id="t-vib">VIBRACIÓN</div>
-                <input type="range" min="0" max="100" value="50">
-            </div>
+            <div class="slider-container"><div class="slider-label" id="t-sound">SONIDO</div><input type="range"></div>
+            <div class="slider-container"><div class="slider-label" id="t-vib">VIBRACIÓN</div><input type="range"></div>
             <button class="btn" id="b-back2" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
 
-        <!-- MUERTE -->
         <div id="menu-death" class="menu-box">
             <h2 id="t-over" style="color:var(--pink)">VOIDED</h2>
             <p style="font-size:24px;"><span id="t-score">PUNTOS</span>: <span id="val-score">0</span></p>
@@ -91,27 +66,16 @@
     const ctx = canvas.getContext('2d');
     
     const langData = {
-        es: { best: "RÉCORD", start: "INICIAR", opts: "OPCIONES", store: "TIENDA (PRONTO)", modes: "MODOS", inf: "MODO INFINITO", back: "VOLVER", sound: "SONIDO", vib: "VIBRACIÓN", over: "VOIDED", score: "PUNTOS", retry: "REINTENTAR", menu: "MENÚ" },
-        en: { best: "BEST", start: "START", opts: "OPTIONS", store: "STORE (SOON)", modes: "MODES", inf: "INFINITE MODE", back: "BACK", sound: "SOUND", vib: "VIBRATION", over: "VOIDED", score: "SCORE", retry: "RETRY", menu: "MENU" }
+        es: { best: "RÉCORD", start: "INICIAR", opts: "OPCIONES", modes: "MODOS", inf: "MODO INFINITO", back: "VOLVER", sound: "SONIDO", vib: "VIBRACIÓN", over: "VOIDED", score: "PUNTOS", retry: "REINTENTAR", menu: "MENÚ" },
+        en: { best: "BEST", start: "START", opts: "OPTIONS", modes: "MODES", inf: "INFINITE", back: "BACK", sound: "SOUND", vib: "VIBRATION", over: "VOIDED", score: "SCORE", retry: "RETRY", menu: "MENU" }
     };
 
     function setLanguage(l) {
         const t = langData[l];
-        document.getElementById('t-best').innerText = t.best;
-        document.getElementById('b-start').innerText = t.start;
-        document.getElementById('b-opts').innerText = t.opts;
-        document.getElementById('b-store').innerText = t.store;
-        document.getElementById('t-modes').innerText = t.modes;
-        document.getElementById('b-inf').innerText = t.inf;
-        document.getElementById('b-back').innerText = t.back;
-        document.getElementById('b-back2').innerText = t.back;
-        document.getElementById('t-opts-title').innerText = t.opts;
-        document.getElementById('t-sound').innerText = t.sound;
-        document.getElementById('t-vib').innerText = t.vib;
-        document.getElementById('t-over').innerText = t.over;
-        document.getElementById('t-score').innerText = t.score;
-        document.getElementById('b-retry').innerText = t.retry;
-        document.getElementById('b-menu').innerText = t.menu;
+        for(let id in t) { 
+            let el = document.getElementById('t-'+id) || document.getElementById('b-'+id);
+            if(el) el.innerText = t[id];
+        }
         document.getElementById('l-es').className = l === 'es' ? 'lang-btn lang-active' : 'lang-btn';
         document.getElementById('l-en').className = l === 'en' ? 'lang-btn lang-active' : 'lang-btn';
     }
@@ -132,109 +96,113 @@
 
     function showMenu(id) {
         document.querySelectorAll('.menu-box').forEach(m => m.style.display = 'none');
-        if(id !== 'none') { document.getElementById(id).style.display = 'block'; gameActive = false; }
-        else { gameActive = true; }
+        if(id !== 'none') document.getElementById(id).style.display = 'block';
+        gameActive = (id === 'none');
     }
 
     function startGame() {
         player = { x: canvas.width * 0.15, y: canvas.height/2, size: 26, vy: 0, gravity: 0.6, jump: -9 };
         obstacles = []; trail = []; particles = []; score = 0; frame = 0; baseSpeed = 5;
+        document.body.style.background = "#020205";
         showMenu('none');
     }
 
     function createExplosion(x, y, color) {
-        for(let i=0; i<30; i++) {
-            particles.push({ x: x, y: y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, size: Math.random()*4, life: 1, color: color });
+        for(let i=0; i<40; i++) {
+            particles.push({ x: x, y: y, vx: (Math.random()-0.5)*20, vy: (Math.random()-0.5)*20, size: Math.random()*5, life: 1, color: color });
         }
     }
 
     function createObstacle() {
-        const type = Math.floor(Math.random() * 4);
-        const w = 70;
-        const gap = Math.max(135, 190 - (score * 1.5)); 
-        switch(type) {
-            case 0: obstacles.push({ x: canvas.width, y: 0, w: w, h: Math.random()*300 + 100, p: false }); break;
-            case 1: let h = Math.random()*300 + 100; obstacles.push({ x: canvas.width, y: canvas.height - h, w: w, h: h, p: false }); break;
-            case 2: obstacles.push({ x: canvas.width, y: canvas.height/2 - 70, w: w, h: 140, p: false }); break;
-            case 3: 
-                let wallH = Math.random() * (canvas.height - gap - 100) + 50;
-                obstacles.push({ x: canvas.width, y: 0, w: w, h: wallH, p: false });
-                obstacles.push({ x: canvas.width, y: wallH + gap, w: w, h: canvas.height, p: false }); 
-                break;
-        }
+        const w = 75;
+        const gap = Math.max(120, 190 - (score * 1.2)); 
+        let wallH = Math.random() * (canvas.height - gap - 100) + 50;
+        obstacles.push({ x: canvas.width, y: 0, w: w, h: wallH, p: false });
+        obstacles.push({ x: canvas.width, y: wallH + gap, w: w, h: canvas.height, p: false }); 
     }
 
     function loop() {
-        ctx.fillStyle = '#020205';
+        // NIVEL 100: Fondo Blanco (Inversión)
+        if(gameActive && score >= 100) {
+            ctx.fillStyle = "white";
+            document.body.style.background = "white";
+        } else {
+            ctx.fillStyle = '#020205';
+        }
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // EFECTO SACUDIDA (Score > 30)
+        // SACUDIDA (Aumenta con el score)
         if(gameActive && score >= 30) {
+            let shake = score >= 100 ? 8 : 4;
             ctx.save();
-            ctx.translate((Math.random()-0.5)*4, (Math.random()-0.5)*4);
+            ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake);
         }
 
         stars.forEach(s => {
-            ctx.fillStyle = "rgba(255,255,255,0.4)";
+            ctx.fillStyle = score >= 100 ? "black" : "white";
             ctx.fillRect(s.x, s.y, s.s, s.s);
             if(gameActive) s.x -= s.v * (baseSpeed/5);
             if(s.x < 0) s.x = canvas.width;
         });
 
+        // Partículas (Ceniza a partir de 75 pts)
+        if(gameActive && score >= 75 && frame % 2 === 0) {
+            particles.push({ x: player.x, y: player.y+13, vx: -Math.random()*5, vy: (Math.random()-0.5)*3, size: 3, life: 1, color: "#00ffff" });
+        }
+
         particles.forEach((p, i) => {
             p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-            ctx.fillStyle = `rgba(0, 255, 255, ${p.life})`;
+            ctx.fillStyle = score >= 100 ? `rgba(0,0,0,${p.life})` : `rgba(0, 255, 255, ${p.life})`;
             ctx.fillRect(p.x, p.y, p.size, p.size);
             if(p.life <= 0) particles.splice(i, 1);
         });
 
         if (gameActive || document.getElementById('menu-death').style.display === 'block') {
             if(gameActive) {
-                frame++;
-                angle += 0.15;
+                frame++; angle += 0.15;
                 trail.push({x: player.x, y: player.y, a: angle});
-                let maxTrail = score >= 30 ? 50 : 20;
+                let maxTrail = score >= 50 ? 60 : 25;
                 if(trail.length > maxTrail) trail.shift();
-                if(frame % Math.max(35, 80 - score) === 0) createObstacle();
+                if(frame % Math.max(30, 75 - score) === 0) createObstacle();
             }
 
-            // ESTELA PROGRESIVA
+            // ESTELA
             trail.forEach((t, i) => {
                 ctx.save();
                 ctx.translate(t.x + 13, t.y + 13);
                 ctx.rotate(t.a);
-                let opacity = i / (score >= 30 ? 60 : 40);
-                ctx.strokeStyle = `rgba(0, 255, 255, ${opacity})`;
+                let op = i / (score >= 50 ? 80 : 40);
+                ctx.strokeStyle = score >= 100 ? `rgba(0,0,0,${op})` : `rgba(0, 255, 255, ${op})`;
                 ctx.strokeRect(-13, -13, 26, 26);
                 ctx.restore();
             });
 
-            // JUGADOR CON EVOLUCIÓN
+            // JUGADOR
             if(gameActive) {
                 ctx.save();
                 ctx.translate(player.x + 13, player.y + 13);
+                
+                // Efecto Glitch (50 pts)
+                if(score >= 50 && frame % 10 < 2) ctx.translate((Math.random()-0.5)*15, 0);
+
                 ctx.rotate(angle);
                 
-                // Nivel 1: Aura (10 pts)
                 if(score >= 10) {
-                    ctx.shadowBlur = 30; ctx.shadowColor = "#00ffff";
-                    ctx.strokeStyle = "#00ffff"; ctx.lineWidth = 4;
-                    ctx.strokeRect(-13, -13, 26, 26);
-                } else {
-                    ctx.strokeStyle = "white"; ctx.lineWidth = 2;
+                    ctx.shadowBlur = score >= 100 ? 50 : 30; 
+                    ctx.shadowColor = score >= 100 ? "black" : "#00ffff";
+                    ctx.strokeStyle = score >= 100 ? "black" : "#00ffff"; 
+                    ctx.lineWidth = 4;
                     ctx.strokeRect(-13, -13, 26, 26);
                 }
-                
-                // Nivel 2: Rayos (20 pts)
-                if(score >= 20) {
-                    for(let i=0; i<3; i++) {
-                        ctx.beginPath(); ctx.strokeStyle = "white"; 
-                        ctx.moveTo(0,0); ctx.lineTo((Math.random()-0.5)*70, (Math.random()-0.5)*70);
+
+                if(score >= 25) {
+                    for(let i=0; i<4; i++) {
+                        ctx.beginPath(); ctx.strokeStyle = score >= 100 ? "black" : "white";
+                        ctx.moveTo(0,0); ctx.lineTo((Math.random()-0.5)*80, (Math.random()-0.5)*80);
                         ctx.stroke();
                     }
                 }
-
-                ctx.fillStyle = "white";
+                ctx.fillStyle = score >= 100 ? "black" : "white";
                 ctx.fillRect(-6, -6, 12, 12);
                 ctx.restore();
             }
@@ -242,36 +210,35 @@
             // OBSTÁCULOS
             obstacles.forEach((o, i) => {
                 if(gameActive) o.x -= baseSpeed;
-                ctx.shadowBlur = score >= 20 ? 20 : 0; ctx.shadowColor = "#ff00ff";
-                ctx.fillStyle = "rgba(255, 0, 255, 0.2)";
-                ctx.strokeStyle = "#ff00ff";
-                ctx.lineWidth = 3;
-                ctx.fillRect(o.x, o.y, o.w, o.h);
-                ctx.strokeRect(o.x, o.y, o.w, o.h);
                 
-                if (gameActive && player.x + 5 < o.x + o.w && player.x + 21 > o.x && player.y + 5 < o.y + o.h && player.y + 21 > o.y) {
+                // Glitch en obstáculos (50 pts)
+                let ox = o.x;
+                if(score >= 50 && frame % 15 < 2) ox += (Math.random()-0.5)*10;
+
+                ctx.shadowBlur = score >= 25 ? 20 : 0; ctx.shadowColor = "#ff00ff";
+                ctx.fillStyle = score >= 100 ? "rgba(0,0,0,0.8)" : "rgba(255, 0, 255, 0.2)";
+                ctx.strokeStyle = score >= 100 ? "black" : "#ff00ff";
+                ctx.lineWidth = 3;
+                ctx.fillRect(ox, o.y, o.w, o.h);
+                ctx.strokeRect(ox, o.y, o.w, o.h);
+                
+                if (gameActive && player.x + 6 < ox + o.w && player.x + 20 > ox && player.y + 6 < o.y + o.h && player.y + 20 > o.y) {
                     createExplosion(player.x + 13, player.y + 13, "#00ffff");
                     endGame();
                 }
-                if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; baseSpeed += 0.25; }
+                if (gameActive && !o.p && ox < player.x) { o.p = true; score++; baseSpeed += 0.3; }
             });
             if(obstacles.length > 25) obstacles.splice(0,1);
             
-            // PUNTUACIÓN GHOST
-            if(gameActive && score >= 30) ctx.restore(); // Termina sacudida para el texto
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = "rgba(255,255,255,0.05)";
+            if(gameActive && score >= 30) ctx.restore();
+            ctx.fillStyle = score >= 100 ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.05)";
             ctx.font = "bold 150px sans-serif"; ctx.textAlign = "center";
             ctx.fillText(score, canvas.width/2, canvas.height/2 + 50);
         }
 
         if(gameActive) {
-            player.vy += player.gravity;
-            player.y += player.vy;
-            if (player.y > canvas.height || player.y < 0) {
-                createExplosion(player.x+13, player.y+13, "#00ffff");
-                endGame();
-            }
+            player.vy += player.gravity; player.y += player.vy;
+            if (player.y > canvas.height || player.y < 0) endGame();
         }
         requestAnimationFrame(loop);
     }
@@ -285,9 +252,7 @@
     }
 
     window.addEventListener('pointerdown', (e) => { 
-        if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
-            if(gameActive) player.vy = player.jump; 
-        }
+        if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && gameActive) player.vy = player.jump; 
     });
 
     document.getElementById('val-best').innerText = highScore;

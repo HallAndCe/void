@@ -9,22 +9,16 @@
         body { margin: 0; background: #05000a; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; color: white; transition: background 0.8s; }
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
-        
         #lang-toggle { position: absolute; top: 20px; left: 20px; pointer-events: auto; font-size: 12px; color: rgba(255,255,255,0.4); cursor: pointer; z-index: 100; border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px; text-transform: uppercase; letter-spacing: 1px; }
-
         .menu-box { text-align: center; background: rgba(0,0,0,0.9); padding: 25px; border-radius: 25px; border: 2px solid var(--neon); backdrop-filter: blur(15px); display: none; pointer-events: auto; width: 85%; max-width: 320px; box-shadow: 0 0 30px rgba(0,255,255,0.2); }
         h1 { font-size: 50px; letter-spacing: 12px; margin: 0 0 10px 0; text-shadow: 0 0 20px var(--neon); color: var(--neon); }
-        
         .btn { width: 100%; margin: 8px 0; padding: 16px; background: #111; color: white; border: 1px solid #444; border-radius: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 13px; transition: 0.2s; }
         .btn:active { transform: scale(0.95); }
         .btn-main { border: 2px solid var(--pink); box-shadow: 0 0 15px rgba(255,0,255,0.3); }
         .btn-revive { border: 2px solid #4CAF50; color: #4CAF50; }
-        
-        /* Estilos para los Sliders */
         .setting-row { margin: 15px 0; text-align: left; }
         .setting-row label { font-size: 10px; color: var(--neon); letter-spacing: 1px; display: block; margin-bottom: 5px; }
         input[type=range] { width: 100%; cursor: pointer; accent-color: var(--neon); }
-
         .small-text { font-size: 11px; color: #888; margin-bottom: 15px; }
         #ad-placeholder { position: absolute; bottom: 0; width: 100%; height: 50px; background: #111; border-top: 1px solid #333; z-index: 100; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #444; }
     </style>
@@ -32,7 +26,7 @@
 <body>
 
     <div id="lang-toggle" onclick="toggleLang()">ES</div>
-    <div id="ad-placeholder">AD_BANNER_AREA</div>
+    <div id="ad-placeholder">BANNER_ADS_INTEGRATION</div>
     <canvas id="game"></canvas>
 
     <div id="ui-layer">
@@ -46,17 +40,14 @@
 
         <div id="menu-opts" class="menu-box">
             <h2 class="t-opts-title" style="color:var(--neon)">AJUSTES</h2>
-            
             <div class="setting-row">
                 <label class="t-vol">VOLUMEN</label>
                 <input type="range" min="0" max="100" value="80">
             </div>
-            
             <div class="setting-row">
                 <label class="t-fx">INTENSIDAD FX</label>
                 <input type="range" min="0" max="100" value="100" id="fx-slider">
             </div>
-
             <button class="btn btn-main t-back" style="margin-top:20px" onclick="showMenu('menu-main')">VOLVER</button>
         </div>
 
@@ -76,7 +67,7 @@
     let gameActive = false, score = 0, frame = 0, angle = 0, lang = 'ES';
     let baseSpeed = 6, player, obstacles = [], stars = [], trail = [], particles = [];
     let highScore = localStorage.getItem('void_best') || 0;
-    let canRevive = true, safeZoneCounter = 0;
+    let canRevive = true, lastObstacleX = 0, lastType = -1;
 
     const texts = {
         ES: { start: "ENTRAR AL VACÍO", opts: "AJUSTES", back: "VOLVER", dead: "COLISIÓN", revive: "REVIVIR (VER AD)", retry: "REINTENTAR", menu: "MENÚ PRINCIPAL", score: "PUNTOS", best: "MÁXIMA", vol: "VOLUMEN", fx: "INTENSIDAD FX" },
@@ -86,18 +77,10 @@
     function toggleLang() {
         lang = lang === 'ES' ? 'EN' : 'ES';
         document.getElementById('lang-toggle').innerText = lang;
-        document.querySelector('.t-start').innerText = texts[lang].start;
-        document.querySelector('.t-opts-btn').innerText = texts[lang].opts;
-        document.querySelector('.t-opts-title').innerText = texts[lang].opts;
-        document.querySelector('.t-back').innerText = texts[lang].back;
-        document.querySelector('.t-dead-title').innerText = texts[lang].dead;
-        document.querySelector('.t-score').innerText = texts[lang].score;
-        document.querySelector('.t-revive').innerText = texts[lang].revive;
-        document.querySelector('.t-retry').innerText = texts[lang].retry;
-        document.querySelector('.t-menu').innerText = texts[lang].menu;
-        document.querySelector('.t-best').innerText = texts[lang].best;
-        document.querySelector('.t-vol').innerText = texts[lang].vol;
-        document.querySelector('.t-fx').innerText = texts[lang].fx;
+        Object.keys(texts[lang]).forEach(key => {
+            const el = document.querySelector(`.t-${key}`);
+            if(el) el.innerText = texts[lang][key];
+        });
     }
 
     function resize() {
@@ -122,7 +105,7 @@
     function startGame() {
         player = { x: canvas.width * 0.15, y: canvas.height/2, size: 26, vy: 0, gravity: 0.6, jump: -9 };
         obstacles = []; trail = []; particles = []; score = 0; frame = 0; baseSpeed = 6;
-        canRevive = true; safeZoneCounter = 0;
+        canRevive = true; lastObstacleX = 0; lastType = -1;
         initStars();
         showMenu('none');
     }
@@ -136,24 +119,31 @@
     }
 
     function createObstacle() {
-        if(safeZoneCounter > 0) { safeZoneCounter--; return; }
-        const type = Math.floor(Math.random() * 4);
+        const minDistance = 320; // DISTANCIA DE SEGURIDAD EN PÍXELES
+        if (canvas.width - lastObstacleX < minDistance) return;
+
+        let type = Math.floor(Math.random() * 4);
+        // Regla: No permitir dos "puertas" (tipo 3) seguidas para evitar cuellos de botella
+        if (type === 3 && lastType === 3) type = Math.floor(Math.random() * 3);
+        
         const w = 75;
-        const gap = Math.max(130, 220 - (score * 1.2));
-        let h = Math.random() * (canvas.height - gap - 150) + 75;
+        const gap = Math.max(140, 240 - (score * 1.5));
+        let h = Math.random() * (canvas.height - gap - 160) + 80;
         const obsData = { x: canvas.width, w: w, p: false, seed: Math.random() };
 
         if(type === 3) {
             obstacles.push({...obsData, y: 0, h: h});
             obstacles.push({...obsData, y: h + gap, h: canvas.height});
-            safeZoneCounter = 2;
         } else if(type === 0) {
-            obstacles.push({...obsData, y: 0, h: h + 50});
+            obstacles.push({...obsData, y: 0, h: h + 60});
         } else if(type === 1) {
-            obstacles.push({...obsData, y: canvas.height - h - 50, h: h + 50});
+            obstacles.push({...obsData, y: canvas.height - h - 60, h: h + 60});
         } else {
-            obstacles.push({...obsData, y: h, h: 100});
+            obstacles.push({...obsData, y: h, h: 110});
         }
+        
+        lastObstacleX = canvas.width;
+        lastType = type;
     }
 
     function loop() {
@@ -197,7 +187,8 @@
         if (gameActive || document.getElementById('menu-death').style.display === 'block') {
             if(gameActive) {
                 frame++; angle += 0.15;
-                if(frame % Math.max(20, 65 - score) === 0) createObstacle();
+                lastObstacleX -= baseSpeed;
+                if(frame % 10 === 0) createObstacle();
             }
 
             if(gameActive) {
@@ -234,9 +225,9 @@
                 }
                 ctx.restore();
 
-                let hf = 4;
-                if (gameActive && player.x + hf < o.x + o.w && player.x + 26 - hf > o.x && player.y + hf < o.y + o.h && player.y + 26 - hf > o.y) endGame();
-                if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; baseSpeed += 0.22; }
+                let hb = 5; // Hitbox permisiva
+                if (gameActive && player.x + hb < o.x + o.w && player.x + 26 - hb > o.x && player.y + hb < o.y + o.h && player.y + 26 - hb > o.y) endGame();
+                if (gameActive && !o.p && o.x < player.x) { o.p = true; score++; baseSpeed += 0.2; }
             });
             
             if(obstacles.length > 20) obstacles.shift();
